@@ -67,6 +67,14 @@ public final class TicketService {
         return repository.findHistoryByPlayer(playerUuid);
     }
 
+    public CompletableFuture<List<Ticket>> findPage(Optional<TicketStatus> statusFilter, int page, int pageSize) {
+        return repository.findPage(statusFilter, page, pageSize);
+    }
+
+    public CompletableFuture<Integer> countAll(Optional<TicketStatus> statusFilter) {
+        return repository.countAll(statusFilter);
+    }
+
     public CompletableFuture<List<Ticket>> findTicketsNeedingEscalation() {
         if (!configManager.escalationEnabled()) {
             return CompletableFuture.completedFuture(List.of());

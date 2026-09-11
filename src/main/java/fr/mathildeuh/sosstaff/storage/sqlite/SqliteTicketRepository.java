@@ -118,6 +118,43 @@ public final class SqliteTicketRepository implements TicketRepository {
     }
 
     @Override
+    public CompletableFuture<List<Ticket>> findPage(Optional<TicketStatus> statusFilter, int page, int pageSize) {
+        String sql = "SELECT * FROM tickets" + (statusFilter.isPresent() ? " WHERE status = ?" : "")
+                + " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+        return supply(() -> {
+            try (Connection connection = dataSource.getConnection();
+                 PreparedStatement statement = connection.prepareStatement(sql)) {
+                int index = 1;
+                if (statusFilter.isPresent()) {
+                    statement.setString(index++, statusFilter.get().name());
+                }
+                statement.setInt(index++, pageSize);
+                statement.setInt(index, Math.max(0, page) * pageSize);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    return mapAll(resultSet);
+                }
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<Integer> countAll(Optional<TicketStatus> statusFilter) {
+        String sql = "SELECT COUNT(*) FROM tickets" + (statusFilter.isPresent() ? " WHERE status = ?" : "");
+        return supply(() -> {
+            try (Connection connection = dataSource.getConnection();
+                 PreparedStatement statement = connection.prepareStatement(sql)) {
+                if (statusFilter.isPresent()) {
+                    statement.setString(1, statusFilter.get().name());
+                }
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    resultSet.next();
+                    return resultSet.getInt(1);
+                }
+            }
+        });
+    }
+
+    @Override
     public CompletableFuture<Integer> countActiveByPlayer(UUID playerUuid) {
         String sql = "SELECT COUNT(*) FROM tickets WHERE player_uuid = ? AND status NOT IN ('CLOSED', 'ARCHIVED')";
         return supply(() -> {

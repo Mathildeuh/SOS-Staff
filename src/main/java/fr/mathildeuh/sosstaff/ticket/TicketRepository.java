@@ -19,6 +19,14 @@ public interface TicketRepository {
 
     CompletableFuture<List<Ticket>> findByStatus(TicketStatus status);
 
+    /**
+     * A real SQL LIMIT/OFFSET page (not fetch-everything-then-slice-in-Java), ordered newest
+     * first, optionally narrowed to one status for the admin panel's filter row.
+     */
+    CompletableFuture<List<Ticket>> findPage(Optional<TicketStatus> statusFilter, int page, int pageSize);
+
+    CompletableFuture<Integer> countAll(Optional<TicketStatus> statusFilter);
+
     CompletableFuture<Integer> countActiveByPlayer(UUID playerUuid);
 
     CompletableFuture<Void> updateStatus(long id, TicketStatus status);
