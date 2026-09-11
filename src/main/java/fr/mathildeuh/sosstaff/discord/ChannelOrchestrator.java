@@ -1,5 +1,6 @@
 package fr.mathildeuh.sosstaff.discord;
 
+import fr.mathildeuh.sosstaff.config.CategoryConfig;
 import fr.mathildeuh.sosstaff.config.ConfigManager;
 import fr.mathildeuh.sosstaff.config.DiscordConfig;
 import fr.mathildeuh.sosstaff.ticket.Ticket;
@@ -8,12 +9,17 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.channel.concrete.Category;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.requests.restaction.ChannelAction;
+import org.bukkit.Bukkit;
 
+import net.dv8tion.jda.api.components.actionrow.ActionRow;
+
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 /**
  * Creates the private Discord channel for a newly opened ticket. There is no Minecraft-to-Discord
@@ -88,8 +94,29 @@ public final class ChannelOrchestrator {
         }
 
         CompletableFuture<Optional<String>> future = new CompletableFuture<>();
-        action.queue(channel -> future.complete(Optional.of(channel.getId())), future::completeExceptionally);
+        action.queue(channel -> {
+            postInitialMessage(channel, ticket, playerName, discordConfig);
+            future.complete(Optional.of(channel.getId()));
+        }, future::completeExceptionally);
         return future;
+    }
+
+    private void postInitialMessage(TextChannel channel, Ticket ticket, String playerName, DiscordConfig discordConfig) {
+        CategoryConfig category = configManager.categories().get(ticket.category());
+        boolean targetOnline = Bukkit.getPlayer(ticket.playerUuid()) != null;
+
+        List<ActionRow> buttonRows = new ArrayList<>(List.of(EmbedFactory.managementRow(ticket.id())));
+        buttonRows.addAll(EmbedFactory.actionButtonRows(discordConfig.actionButtons(), ticket.id(), targetOnline));
+
+        var onCreate = discordConfig.mentions().onCreate();
+        String roleMentions = onCreate.roleIds().stream().map(id -> "<@&" + id + ">").collect(Collectors.joining(" "));
+        String pingMessage = (roleMentions.isBlank() ? "" : roleMentions + " ")
+                + onCreate.message().replace("%player%", playerName).replace("%category%", category.displayName());
+
+        channel.sendMessage(pingMessage)
+                .addEmbeds(EmbedFactory.ticketEmbed(ticket, category, playerName, null))
+                .addComponents(buttonRows)
+                .queue();
     }
 
     static String formatChannelName(String format, Ticket ticket, String playerName) {

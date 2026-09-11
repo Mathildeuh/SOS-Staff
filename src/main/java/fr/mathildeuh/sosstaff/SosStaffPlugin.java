@@ -5,9 +5,15 @@ import fr.mathildeuh.sosstaff.command.PlayerCommands;
 import fr.mathildeuh.sosstaff.config.ConfigManager;
 import fr.mathildeuh.sosstaff.config.ConfigValidationException;
 import fr.mathildeuh.sosstaff.config.StorageType;
+import fr.mathildeuh.sosstaff.discord.ActionButtonHandler;
+import fr.mathildeuh.sosstaff.discord.ButtonHandler;
 import fr.mathildeuh.sosstaff.discord.ChannelOrchestrator;
 import fr.mathildeuh.sosstaff.discord.DiscordGateway;
+import fr.mathildeuh.sosstaff.discord.DiscordInteractionListener;
 import fr.mathildeuh.sosstaff.discord.DiscordMessageListener;
+import fr.mathildeuh.sosstaff.discord.FreezeListener;
+import fr.mathildeuh.sosstaff.discord.FrozenPlayers;
+import fr.mathildeuh.sosstaff.discord.InternalActionRegistry;
 import fr.mathildeuh.sosstaff.discord.WebhookRelay;
 import fr.mathildeuh.sosstaff.lang.LangManager;
 import fr.mathildeuh.sosstaff.session.LiveChatListener;
@@ -77,16 +83,23 @@ public final class SosStaffPlugin extends JavaPlugin {
 
         LiveChatSessionManager sessionManager = new LiveChatSessionManager();
 
+        FrozenPlayers frozenPlayers = new FrozenPlayers();
+        InternalActionRegistry internalActionRegistry = new InternalActionRegistry(frozenPlayers);
+        ButtonHandler buttonHandler = new ButtonHandler(this, ticketService, configManager, ticketMessageRepository, sessionManager);
+        ActionButtonHandler actionButtonHandler = new ActionButtonHandler(this, configManager, ticketService, internalActionRegistry);
+
         discordGateway = new DiscordGateway(getLogger());
         DiscordMessageListener discordMessageListener =
                 new DiscordMessageListener(this, sessionManager, ticketMessageRepository, langManager);
-        discordGateway.start(configManager.discord().token(), discordMessageListener);
+        DiscordInteractionListener discordInteractionListener = new DiscordInteractionListener(buttonHandler, actionButtonHandler);
+        discordGateway.start(configManager.discord().token(), discordMessageListener, discordInteractionListener);
 
         ChannelOrchestrator channelOrchestrator = new ChannelOrchestrator(discordGateway, configManager, getLogger());
         WebhookRelay webhookRelay = new WebhookRelay(discordGateway, getLogger());
 
         liveChatListener = new LiveChatListener(sessionManager, webhookRelay, ticketMessageRepository, ticketService, getLogger());
         getServer().getPluginManager().registerEvents(liveChatListener, this);
+        getServer().getPluginManager().registerEvents(new FreezeListener(frozenPlayers), this);
 
         new PlayerCommands(this, ticketService, configManager, langManager, channelOrchestrator, sessionManager).register();
 

@@ -47,12 +47,20 @@ public final class TicketService {
         return repository.updatePriority(ticketId, priority).thenCompose(v -> requireById(ticketId));
     }
 
+    public CompletableFuture<Ticket> reopen(long ticketId) {
+        return repository.updateStatus(ticketId, TicketStatus.OPEN).thenCompose(v -> requireById(ticketId));
+    }
+
     public CompletableFuture<Void> setDiscordChannelId(long ticketId, String discordChannelId) {
         return repository.setDiscordChannelId(ticketId, discordChannelId);
     }
 
     public CompletableFuture<Optional<Ticket>> findActiveTicket(UUID playerUuid) {
         return repository.findActiveByPlayer(playerUuid);
+    }
+
+    public CompletableFuture<Optional<Ticket>> findById(long ticketId) {
+        return repository.findById(ticketId);
     }
 
     public CompletableFuture<List<Ticket>> findHistory(UUID playerUuid) {
