@@ -13,6 +13,7 @@ dependencies {
 
     implementation("com.zaxxer:HikariCP:7.1.0")
     implementation("org.xerial:sqlite-jdbc:3.53.4.0")
+    implementation("org.incendo:cloud-paper:2.0.0-beta.10")
 
     testImplementation("io.papermc.paper:paper-api:26.2.build.+")
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
@@ -37,6 +38,7 @@ tasks {
     shadowJar {
         val libs = "fr.mathildeuh.sosstaff.libs"
         relocate("com.zaxxer.hikari", "$libs.hikari")
+        relocate("org.incendo.cloud", "$libs.cloud")
         // org.sqlite is intentionally NOT relocated: its native-library loader resolves
         // bundled .so/.dll/.dylib resources through hardcoded org/sqlite/native paths,
         // and relocating the package is a known way to break that lookup at runtime.
