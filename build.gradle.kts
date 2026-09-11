@@ -1,3 +1,5 @@
+import java.time.Instant
+
 plugins {
     id("java-library")
     id("com.gradleup.shadow") version "9.6.1"
@@ -64,10 +66,20 @@ tasks {
         // exactly the kind of thing a subtly-broken relocation would fail silently in.
     }
 
+    val gitCommitHash: String = try {
+        providers.exec { commandLine("git", "rev-parse", "--short", "HEAD") }.standardOutput.asText.get().trim()
+    } catch (e: Exception) {
+        "unknown"
+    }
+    val buildDate: String = Instant.now().toString()
+    val buildVersion: String = version.toString()
+
     processResources {
-        val props = mapOf("version" to version)
         filesMatching("plugin.yml") {
-            expand(props)
+            expand(mapOf("version" to buildVersion))
+        }
+        filesMatching("version.properties") {
+            expand(mapOf("version" to buildVersion, "commitHash" to gitCommitHash, "buildDate" to buildDate))
         }
     }
 }
