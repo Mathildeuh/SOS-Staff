@@ -7,6 +7,7 @@ import fr.mathildeuh.sosstaff.ticket.TicketService;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.interactions.InteractionHook;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -18,7 +19,7 @@ import java.util.List;
  * internal keys (HEAL, FEED, KICK, ...) via InternalActionRegistry, or a raw command string with
  * placeholders substituted, dispatched as the console.
  *
- * The "permission" field on each button is a Bukkit permission node (matching the
+ * <p>The "permission" field on each button is a Bukkit permission node (matching the
  * sosstaff.action.* convention used everywhere else in config.yml), which only means something
  * once resolved against an actual Bukkit Permissible. Since the button was clicked in Discord,
  * this resolves the clicker to an online player by matching their Discord display name (see
@@ -60,7 +61,7 @@ public final class ActionButtonHandler {
         }
 
         event.deferEdit().queue();
-        runButton(button, ticketId, staff, event::getHook);
+        runButton(button, ticketId, staff, event.getHook());
     }
 
     public void handleConfirm(ButtonInteractionEvent event, String buttonId, long ticketId) {
@@ -71,7 +72,7 @@ public final class ActionButtonHandler {
             return;
         }
         event.deferEdit().queue();
-        runButton(button, ticketId, staff, event::getHook);
+        runButton(button, ticketId, staff, event.getHook());
     }
 
     public void handleCancel(ButtonInteractionEvent event) {
@@ -85,17 +86,16 @@ public final class ActionButtonHandler {
         event.reply("Confirm running '" + button.label() + "'?").setEphemeral(true).addComponents(confirmRow).queue();
     }
 
-    private void runButton(DiscordConfig.ActionButton button, long ticketId, Player staff,
-                            java.util.function.Supplier<net.dv8tion.jda.api.interactions.InteractionHook> hookSupplier) {
+    private void runButton(DiscordConfig.ActionButton button, long ticketId, Player staff, InteractionHook hook) {
         ticketService.findById(ticketId).thenAccept(ticketOpt -> {
             if (ticketOpt.isEmpty()) {
-                hookSupplier.get().editOriginal("Ticket #" + ticketId + " no longer exists.").queue();
+                hook.editOriginal("Ticket #" + ticketId + " no longer exists.").queue();
                 return;
             }
             Ticket ticket = ticketOpt.get();
             Player target = Bukkit.getPlayer(ticket.playerUuid());
             if (button.requiresOnline() && target == null) {
-                hookSupplier.get().editOriginal("The ticket's player is not online.").queue();
+                hook.editOriginal("The ticket's player is not online.").queue();
                 return;
             }
 
@@ -104,13 +104,13 @@ public final class ActionButtonHandler {
                     action -> action.execute(plugin, target, staff, reason),
                     () -> runRawCommand(button.command(), target, staff, ticketId));
 
-            hookSupplier.get().editOriginal("'" + button.label() + "' executed by " + staff.getName() + ".").queue();
+            hook.editOriginal("'" + button.label() + "' executed by " + staff.getName() + ".").queue();
         });
     }
 
     private void runRawCommand(String rawCommand, Player target, Player staff, long ticketId) {
         String command = substitute(rawCommand, target == null ? null : target.getName(), staff.getName(), ticketId);
-        Bukkit.getGlobalRegionScheduler().run(plugin, task ->
+        Bukkit.getGlobalRegionScheduler().run(plugin, ignored ->
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command));
     }
 

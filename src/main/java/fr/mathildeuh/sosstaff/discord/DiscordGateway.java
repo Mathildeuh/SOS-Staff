@@ -70,8 +70,8 @@ public final class DiscordGateway {
         }
         if (guilds.size() > 1) {
             logger.warning("The Discord bot is a member of " + guilds.size()
-                    + " servers; SOS-Staff only supports one and will use '" + guilds.get(0).getName() + "'.");
+                    + " servers; SOS-Staff only supports one and will use '" + guilds.getFirst().getName() + "'.");
         }
-        return Optional.of(guilds.get(0));
+        return Optional.of(guilds.getFirst());
     }
 }

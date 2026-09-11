@@ -40,7 +40,6 @@ public final class SosStaffPlugin extends JavaPlugin {
     private ExecutorService storageExecutor;
     private TicketService ticketService;
     private DiscordGateway discordGateway;
-    private LiveChatListener liveChatListener;
 
     @Override
     public void onEnable() {
@@ -97,7 +96,8 @@ public final class SosStaffPlugin extends JavaPlugin {
         ChannelOrchestrator channelOrchestrator = new ChannelOrchestrator(discordGateway, configManager, getLogger());
         WebhookRelay webhookRelay = new WebhookRelay(discordGateway, getLogger());
 
-        liveChatListener = new LiveChatListener(sessionManager, webhookRelay, ticketMessageRepository, ticketService, getLogger());
+        LiveChatListener liveChatListener =
+                new LiveChatListener(sessionManager, webhookRelay, ticketMessageRepository, ticketService, getLogger());
         getServer().getPluginManager().registerEvents(liveChatListener, this);
         getServer().getPluginManager().registerEvents(new FreezeListener(frozenPlayers), this);
 

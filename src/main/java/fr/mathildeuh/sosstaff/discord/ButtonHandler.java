@@ -8,6 +8,8 @@ import fr.mathildeuh.sosstaff.ticket.TicketMessage;
 import fr.mathildeuh.sosstaff.ticket.TicketMessageRepository;
 import fr.mathildeuh.sosstaff.ticket.TicketPriority;
 import fr.mathildeuh.sosstaff.ticket.TicketService;
+import fr.mathildeuh.sosstaff.ticket.TicketStatus;
+import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import org.bukkit.OfflinePlayer;
@@ -16,8 +18,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.time.format.DateTimeFormatter;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -93,9 +95,10 @@ public final class ButtonHandler {
     }
 
     private void handlePing(ButtonInteractionEvent event, long ticketId) {
-        var mentions = configManager.discord().mentions().onCreate();
-        String roleMentions = mentions.roleIds().stream().map(id -> "<@&" + id + ">").collect(Collectors.joining(" "));
-        event.reply((roleMentions.isBlank() ? "" : roleMentions + " ") + mentions.message()).queue();
+        var staffRoles = configManager.discord().permissions().staffRoleIds();
+        String roleMentions = staffRoles.stream().map(id -> "<@&" + id + ">").collect(Collectors.joining(" "));
+        String message = configManager.discord().mentions().onEscalate().message().replace("%id%", String.valueOf(ticketId));
+        event.reply((roleMentions.isBlank() ? "" : roleMentions + " ") + message).queue();
     }
 
     private void updateEmbed(ButtonInteractionEvent event, Ticket ticket) {
@@ -103,7 +106,18 @@ public final class ButtonHandler {
         String playerName = offlineName(ticket.playerUuid());
         String claimedByName = ticket.claimedBy() == null ? null : offlineName(ticket.claimedBy());
         MessageEmbed embed = EmbedFactory.ticketEmbed(ticket, category, playerName, claimedByName);
-        event.getHook().editOriginalEmbeds(embed).queue();
+
+        boolean closed = ticket.status() == TicketStatus.CLOSED || ticket.status() == TicketStatus.ARCHIVED;
+        List<ActionRow> rows = new ArrayList<>();
+        if (closed) {
+            rows.add(EmbedFactory.reopenRow(ticket.id()));
+        } else {
+            rows.add(EmbedFactory.managementRow(ticket.id()));
+            boolean targetOnline = plugin.getServer().getPlayer(ticket.playerUuid()) != null;
+            rows.addAll(EmbedFactory.actionButtonRows(configManager.discord().actionButtons(), ticket.id(), targetOnline));
+        }
+
+        event.getHook().editOriginalEmbeds(embed).setComponents(rows).queue();
     }
 
     private void replyNoStaffMatch(ButtonInteractionEvent event) {

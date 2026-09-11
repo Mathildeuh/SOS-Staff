@@ -59,7 +59,7 @@ public final class SqliteTicketRepository implements TicketRepository {
                  PreparedStatement statement = connection.prepareStatement("SELECT * FROM tickets WHERE id = ?")) {
                 statement.setLong(1, id);
                 try (ResultSet resultSet = statement.executeQuery()) {
-                    return resultSet.next() ? Optional.of(map(resultSet)) : Optional.<Ticket>empty();
+                    return resultSet.next() ? Optional.of(map(resultSet)) : Optional.empty();
                 }
             }
         });
@@ -67,29 +67,23 @@ public final class SqliteTicketRepository implements TicketRepository {
 
     @Override
     public CompletableFuture<Optional<Ticket>> findActiveByPlayer(UUID playerUuid) {
-        String sql = "SELECT * FROM tickets WHERE player_uuid = ? AND status NOT IN ('CLOSED', 'ARCHIVED') "
-                + "ORDER BY created_at DESC LIMIT 1";
-        return supply(() -> {
-            try (Connection connection = dataSource.getConnection();
-                 PreparedStatement statement = connection.prepareStatement(sql)) {
-                statement.setString(1, playerUuid.toString());
-                try (ResultSet resultSet = statement.executeQuery()) {
-                    return resultSet.next() ? Optional.of(map(resultSet)) : Optional.<Ticket>empty();
-                }
-            }
-        });
+        return findOneByPlayer("SELECT * FROM tickets WHERE player_uuid = ? AND status NOT IN ('CLOSED', 'ARCHIVED') "
+                + "ORDER BY created_at DESC LIMIT 1", playerUuid);
     }
 
     @Override
     public CompletableFuture<Optional<Ticket>> findMostRecentClosedByPlayer(UUID playerUuid) {
-        String sql = "SELECT * FROM tickets WHERE player_uuid = ? AND status IN ('CLOSED', 'ARCHIVED') "
-                + "ORDER BY closed_at DESC LIMIT 1";
+        return findOneByPlayer("SELECT * FROM tickets WHERE player_uuid = ? AND status IN ('CLOSED', 'ARCHIVED') "
+                + "ORDER BY closed_at DESC LIMIT 1", playerUuid);
+    }
+
+    private CompletableFuture<Optional<Ticket>> findOneByPlayer(String sql, UUID playerUuid) {
         return supply(() -> {
             try (Connection connection = dataSource.getConnection();
                  PreparedStatement statement = connection.prepareStatement(sql)) {
                 statement.setString(1, playerUuid.toString());
                 try (ResultSet resultSet = statement.executeQuery()) {
-                    return resultSet.next() ? Optional.of(map(resultSet)) : Optional.<Ticket>empty();
+                    return resultSet.next() ? Optional.of(map(resultSet)) : Optional.empty();
                 }
             }
         });

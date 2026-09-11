@@ -30,7 +30,7 @@ class EmbedFactoryTest {
 
         List<ActionRow> rows = EmbedFactory.actionButtonRows(Map.of("heal-player", button), 42L, false);
 
-        assertTrue(rows.get(0).getButtons().get(0).isDisabled());
+        assertTrue(rows.getFirst().getButtons().getFirst().isDisabled());
     }
 
     @Test
@@ -40,7 +40,7 @@ class EmbedFactoryTest {
 
         List<ActionRow> rows = EmbedFactory.actionButtonRows(Map.of("heal-player", button), 42L, true);
 
-        assertFalse(rows.get(0).getButtons().get(0).isDisabled());
+        assertFalse(rows.getFirst().getButtons().getFirst().isDisabled());
     }
 
     @Test

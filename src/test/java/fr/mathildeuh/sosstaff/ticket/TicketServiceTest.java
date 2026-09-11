@@ -144,7 +144,7 @@ class TicketServiceTest {
         List<Ticket> needingEscalation = get(service.findTicketsNeedingEscalation());
 
         assertEquals(1, needingEscalation.size());
-        assertEquals(oldEnough.id(), needingEscalation.get(0).id());
+        assertEquals(oldEnough.id(), needingEscalation.getFirst().id());
     }
 
     @Test

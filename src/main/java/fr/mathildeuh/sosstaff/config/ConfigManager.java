@@ -42,7 +42,11 @@ public final class ConfigManager {
         ConfigurationSection categoriesSection = requireSection(yaml, "categories");
         Map<String, CategoryConfig> categories = new LinkedHashMap<>();
         for (String id : categoriesSection.getKeys(false)) {
-            categories.put(id, CategoryConfig.fromSection(id, categoriesSection.getConfigurationSection(id)));
+            ConfigurationSection categorySection = categoriesSection.getConfigurationSection(id);
+            if (categorySection == null) {
+                throw new ConfigValidationException("categories." + id + " must be a mapping, not a plain value");
+            }
+            categories.put(id, CategoryConfig.fromSection(id, categorySection));
         }
         if (categories.isEmpty()) {
             throw new ConfigValidationException("categories: at least one category must be configured");

@@ -23,10 +23,8 @@ import java.util.Optional;
 public final class InternalActionRegistry {
 
     private final Map<String, InternalAction> actions = new HashMap<>();
-    private final FrozenPlayers frozenPlayers;
 
     public InternalActionRegistry(FrozenPlayers frozenPlayers) {
-        this.frozenPlayers = frozenPlayers;
         register("HEAL", (plugin, target, staff, extra) -> onEntity(plugin, target, () -> {
             AttributeInstance maxHealth = target.getAttribute(Attribute.MAX_HEALTH);
             if (maxHealth != null) {

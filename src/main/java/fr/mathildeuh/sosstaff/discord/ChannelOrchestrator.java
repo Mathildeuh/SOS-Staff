@@ -60,7 +60,7 @@ public final class ChannelOrchestrator {
     private CompletableFuture<Category> findOrCreateCategory(Guild guild, DiscordConfig.Category categoryConfig) {
         List<Category> existing = guild.getCategoryCache().getElementsByName(categoryConfig.name(), true);
         if (!existing.isEmpty()) {
-            return CompletableFuture.completedFuture(existing.get(0));
+            return CompletableFuture.completedFuture(existing.getFirst());
         }
         if (!categoryConfig.autoCreate()) {
             return CompletableFuture.failedFuture(new IllegalStateException(

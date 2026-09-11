@@ -20,8 +20,8 @@ import org.incendo.cloud.paper.util.sender.PlayerSource;
 import org.incendo.cloud.paper.util.sender.Source;
 import org.incendo.cloud.parser.standard.StringParser;
 
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 public final class PlayerCommands {
 
@@ -47,7 +47,7 @@ public final class PlayerCommands {
     public void register() {
         PaperCommandManager<Source> commandManager = PaperCommandManager
                 .builder(PaperSimpleSenderMapper.simpleSenderMapper())
-                .executionCoordinator(ExecutionCoordinator.<Source>simpleCoordinator())
+                .executionCoordinator(ExecutionCoordinator.simpleCoordinator())
                 .buildOnEnable(plugin);
 
         String main = configManager.commandMain();
@@ -121,7 +121,7 @@ public final class PlayerCommands {
                 .thenCompose(active -> {
                     if (active.isEmpty()) {
                         runOnMainThread(() -> send(player, noneActiveMessage, Map.of()));
-                        return java.util.concurrent.CompletableFuture.completedFuture(null);
+                        return CompletableFuture.completedFuture(null);
                     }
                     String effectiveReason = reason.isBlank() ? "Closed by the player" : reason;
                     return ticketService.close(active.get().id(), effectiveReason).thenAccept(closed -> {

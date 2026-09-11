@@ -43,7 +43,7 @@ public final class WebhookRelay {
             clientOpt.get().sendMessage(content)
                     .setUsername(playerName)
                     .setAvatarUrl(SkinRenderer.avatarUrl(playerUuid))
-                    .queue(message -> future.complete(null), future::completeExceptionally);
+                    .queue(ignored -> future.complete(null), future::completeExceptionally);
             return future;
         });
     }

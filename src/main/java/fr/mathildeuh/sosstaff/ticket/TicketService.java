@@ -30,25 +30,25 @@ public final class TicketService {
             return create(playerUuid, category, priority);
         }
         return checkAntiSpam(playerUuid)
-                .thenCompose(rejection -> rejection.isPresent()
-                        ? CompletableFuture.completedFuture(rejection.get())
-                        : create(playerUuid, category, priority));
+                .thenCompose(rejection -> rejection
+                        .map(CompletableFuture::completedFuture)
+                        .orElseGet(() -> create(playerUuid, category, priority)));
     }
 
     public CompletableFuture<Ticket> claim(long ticketId, UUID staffUuid) {
-        return repository.claim(ticketId, staffUuid).thenCompose(v -> requireById(ticketId));
+        return repository.claim(ticketId, staffUuid).thenCompose(ignored -> requireById(ticketId));
     }
 
     public CompletableFuture<Ticket> close(long ticketId, String reason) {
-        return repository.close(ticketId, reason).thenCompose(v -> requireById(ticketId));
+        return repository.close(ticketId, reason).thenCompose(ignored -> requireById(ticketId));
     }
 
     public CompletableFuture<Ticket> updatePriority(long ticketId, TicketPriority priority) {
-        return repository.updatePriority(ticketId, priority).thenCompose(v -> requireById(ticketId));
+        return repository.updatePriority(ticketId, priority).thenCompose(ignored -> requireById(ticketId));
     }
 
     public CompletableFuture<Ticket> reopen(long ticketId) {
-        return repository.updateStatus(ticketId, TicketStatus.OPEN).thenCompose(v -> requireById(ticketId));
+        return repository.updateStatus(ticketId, TicketStatus.OPEN).thenCompose(ignored -> requireById(ticketId));
     }
 
     public CompletableFuture<Void> setDiscordChannelId(long ticketId, String discordChannelId) {
@@ -86,8 +86,7 @@ public final class TicketService {
         return repository.countActiveByPlayer(playerUuid).thenCompose(activeCount -> {
             if (activeCount >= configManager.maxOpenTicketsPerPlayer()) {
                 return repository.findActiveByPlayer(playerUuid)
-                        .thenApply(existing -> existing.map(ticket ->
-                                (TicketCreationResult) new TicketCreationResult.RejectedTooManyOpenTickets(ticket)));
+                        .thenApply(existing -> existing.map(TicketCreationResult.RejectedTooManyOpenTickets::new));
             }
             return checkCooldown(playerUuid);
         });
@@ -103,7 +102,7 @@ public final class TicketService {
             if (sinceClose.compareTo(cooldown) >= 0) {
                 return Optional.empty();
             }
-            return Optional.of((TicketCreationResult) new TicketCreationResult.RejectedCooldownActive(cooldown.minus(sinceClose)));
+            return Optional.of(new TicketCreationResult.RejectedCooldownActive(cooldown.minus(sinceClose)));
         });
     }
 
