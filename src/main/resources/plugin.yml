@@ -1,8 +1,11 @@
 name: SOS-Staff
-prefix: [ SOS ]
+description: Free and open source support ticket management with a full bidirectional Discord bridge.
+website: https://github.com/Mathildeuh/SOS-Staff
+prefix: SOS-Staff
 version: '${version}'
 
-main: fr.mathildeuh.sosstaff.Sos_Staff
-api-version: '26.1'
+main: fr.mathildeuh.sosstaff.SosStaffPlugin
+api-version: '26.2'
+folia-supported: true
 
 authors: [ Mathildeuh ]
