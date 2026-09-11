@@ -13,6 +13,8 @@ public interface TicketRepository {
 
     CompletableFuture<Optional<Ticket>> findActiveByPlayer(UUID playerUuid);
 
+    CompletableFuture<Optional<Ticket>> findMostRecentClosedByPlayer(UUID playerUuid);
+
     CompletableFuture<List<Ticket>> findHistoryByPlayer(UUID playerUuid);
 
     CompletableFuture<List<Ticket>> findByStatus(TicketStatus status);

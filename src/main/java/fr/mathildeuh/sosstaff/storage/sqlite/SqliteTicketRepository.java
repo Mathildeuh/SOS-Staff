@@ -81,6 +81,21 @@ public final class SqliteTicketRepository implements TicketRepository {
     }
 
     @Override
+    public CompletableFuture<Optional<Ticket>> findMostRecentClosedByPlayer(UUID playerUuid) {
+        String sql = "SELECT * FROM tickets WHERE player_uuid = ? AND status IN ('CLOSED', 'ARCHIVED') "
+                + "ORDER BY closed_at DESC LIMIT 1";
+        return supply(() -> {
+            try (Connection connection = dataSource.getConnection();
+                 PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setString(1, playerUuid.toString());
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    return resultSet.next() ? Optional.of(map(resultSet)) : Optional.<Ticket>empty();
+                }
+            }
+        });
+    }
+
+    @Override
     public CompletableFuture<List<Ticket>> findHistoryByPlayer(UUID playerUuid) {
         return supply(() -> {
             try (Connection connection = dataSource.getConnection();
