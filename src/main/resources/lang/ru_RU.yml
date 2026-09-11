@@ -7,3 +7,23 @@ general:
   reload-failure: "Не удалось перезагрузить: %error%"
   error:
     generic: "Произошла ошибка: %error%"
+
+ticket:
+  create:
+    success: "Тикет #%id% создан! Персонал скоро свяжется с вами."
+    unknown-category: "Неизвестная категория: '%category%'."
+    rejected:
+      too-many-open: "У вас уже есть открытый тикет: #%id%."
+      cooldown: "Подождите %seconds% сек. перед созданием нового тикета."
+  status:
+    none: "У вас нет активного тикета."
+    active: "Тикет #%id% - статус: %status%, приоритет: %priority%."
+  list:
+    empty: "У вас нет истории тикетов."
+    entry: "#%id% [%category%] %status%"
+  close:
+    none-active: "У вас нет активного тикета для закрытия."
+    success: "Тикет #%id% закрыт."
+  cancel:
+    none-active: "У вас нет активного тикета для отмены."
+    success: "Тикет #%id% отменён."

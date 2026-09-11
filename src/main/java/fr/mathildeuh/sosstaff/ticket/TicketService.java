@@ -47,6 +47,14 @@ public final class TicketService {
         return repository.updatePriority(ticketId, priority).thenCompose(v -> requireById(ticketId));
     }
 
+    public CompletableFuture<Optional<Ticket>> findActiveTicket(UUID playerUuid) {
+        return repository.findActiveByPlayer(playerUuid);
+    }
+
+    public CompletableFuture<List<Ticket>> findHistory(UUID playerUuid) {
+        return repository.findHistoryByPlayer(playerUuid);
+    }
+
     public CompletableFuture<List<Ticket>> findTicketsNeedingEscalation() {
         if (!configManager.escalationEnabled()) {
             return CompletableFuture.completedFuture(List.of());

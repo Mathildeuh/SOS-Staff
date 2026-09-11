@@ -7,3 +7,23 @@ general:
   reload-failure: "Neuladen fehlgeschlagen: %error%"
   error:
     generic: "Ein Fehler ist aufgetreten: %error%"
+
+ticket:
+  create:
+    success: "Ticket #%id% erstellt! Das Team wird sich in Kürze bei dir melden."
+    unknown-category: "Unbekannte Kategorie: '%category%'."
+    rejected:
+      too-many-open: "Du hast bereits ein offenes Ticket: #%id%."
+      cooldown: "Bitte warte %seconds% Sekunden, bevor du ein neues Ticket erstellst."
+  status:
+    none: "Du hast kein aktives Ticket."
+    active: "Ticket #%id% - Status: %status%, Priorität: %priority%."
+  list:
+    empty: "Du hast keinen Ticketverlauf."
+    entry: "#%id% [%category%] %status%"
+  close:
+    none-active: "Du hast kein aktives Ticket zum Schließen."
+    success: "Ticket #%id% geschlossen."
+  cancel:
+    none-active: "Du hast kein aktives Ticket zum Abbrechen."
+    success: "Ticket #%id% abgebrochen."

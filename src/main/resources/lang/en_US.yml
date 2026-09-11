@@ -7,3 +7,23 @@ general:
   reload-failure: "Reload failed: %error%"
   error:
     generic: "An error occurred: %error%"
+
+ticket:
+  create:
+    success: "Ticket #%id% created! Staff will be with you shortly."
+    unknown-category: "Unknown category '%category%'."
+    rejected:
+      too-many-open: "You already have an open ticket: #%id%."
+      cooldown: "Please wait %seconds%s before opening a new ticket."
+  status:
+    none: "You don't have an active ticket."
+    active: "Ticket #%id% - status: %status%, priority: %priority%."
+  list:
+    empty: "You have no ticket history."
+    entry: "#%id% [%category%] %status%"
+  close:
+    none-active: "You don't have an active ticket to close."
+    success: "Ticket #%id% closed."
+  cancel:
+    none-active: "You don't have an active ticket to cancel."
+    success: "Ticket #%id% cancelled."

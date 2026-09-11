@@ -4,7 +4,20 @@ public enum Message {
     CREATION_REPORT_PROMPT("creation.report.prompt"),
     GENERAL_RELOAD_SUCCESS("general.reload-success"),
     GENERAL_RELOAD_FAILURE("general.reload-failure"),
-    GENERAL_ERROR_GENERIC("general.error.generic");
+    GENERAL_ERROR_GENERIC("general.error.generic"),
+
+    TICKET_CREATE_SUCCESS("ticket.create.success"),
+    TICKET_CREATE_UNKNOWN_CATEGORY("ticket.create.unknown-category"),
+    TICKET_CREATE_REJECTED_TOO_MANY_OPEN("ticket.create.rejected.too-many-open"),
+    TICKET_CREATE_REJECTED_COOLDOWN("ticket.create.rejected.cooldown"),
+    TICKET_STATUS_NONE("ticket.status.none"),
+    TICKET_STATUS_ACTIVE("ticket.status.active"),
+    TICKET_LIST_EMPTY("ticket.list.empty"),
+    TICKET_LIST_ENTRY("ticket.list.entry"),
+    TICKET_CLOSE_NONE_ACTIVE("ticket.close.none-active"),
+    TICKET_CLOSE_SUCCESS("ticket.close.success"),
+    TICKET_CANCEL_NONE_ACTIVE("ticket.cancel.none-active"),
+    TICKET_CANCEL_SUCCESS("ticket.cancel.success");
 
     private final String key;
 

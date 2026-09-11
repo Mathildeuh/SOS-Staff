@@ -7,3 +7,23 @@ general:
   reload-failure: "Le rechargement a échoué: %error%"
   error:
     generic: "Une erreur est survenue: %error%"
+
+ticket:
+  create:
+    success: "Ticket #%id% créé ! Le staff s'occupera de vous rapidement."
+    unknown-category: "Catégorie inconnue: '%category%'."
+    rejected:
+      too-many-open: "Vous avez déjà un ticket ouvert: #%id%."
+      cooldown: "Merci d'attendre %seconds%s avant d'ouvrir un nouveau ticket."
+  status:
+    none: "Vous n'avez pas de ticket actif."
+    active: "Ticket #%id% - statut: %status%, priorité: %priority%."
+  list:
+    empty: "Vous n'avez aucun historique de ticket."
+    entry: "#%id% [%category%] %status%"
+  close:
+    none-active: "Vous n'avez pas de ticket actif à fermer."
+    success: "Ticket #%id% fermé."
+  cancel:
+    none-active: "Vous n'avez pas de ticket actif à annuler."
+    success: "Ticket #%id% annulé."
