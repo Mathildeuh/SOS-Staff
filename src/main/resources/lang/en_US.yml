@@ -1,0 +1,9 @@
+creation:
+  report:
+    prompt: "Please describe the player you want to report, including their name and what happened."
+
+general:
+  reload-success: "Configuration and language files reloaded successfully."
+  reload-failure: "Reload failed: %error%"
+  error:
+    generic: "An error occurred: %error%"

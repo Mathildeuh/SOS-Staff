@@ -1,0 +1,9 @@
+creation:
+  report:
+    prompt: "Describe al jugador que quieres reportar, indicando su nombre y lo que ocurrió."
+
+general:
+  reload-success: "Configuración y archivos de idioma recargados correctamente."
+  reload-failure: "Error al recargar: %error%"
+  error:
+    generic: "Se produjo un error: %error%"

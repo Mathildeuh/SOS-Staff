@@ -1,0 +1,9 @@
+creation:
+  report:
+    prompt: "Bitte beschreibe den Spieler, den du melden möchtest, mit Namen und einer Beschreibung des Vorfalls."
+
+general:
+  reload-success: "Konfiguration und Sprachdateien wurden erfolgreich neu geladen."
+  reload-failure: "Neuladen fehlgeschlagen: %error%"
+  error:
+    generic: "Ein Fehler ist aufgetreten: %error%"
