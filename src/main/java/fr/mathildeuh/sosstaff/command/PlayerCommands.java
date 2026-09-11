@@ -1,6 +1,7 @@
 package fr.mathildeuh.sosstaff.command;
 
 import fr.mathildeuh.sosstaff.config.ConfigManager;
+import fr.mathildeuh.sosstaff.discord.ChannelOrchestrator;
 import fr.mathildeuh.sosstaff.lang.LangManager;
 import fr.mathildeuh.sosstaff.lang.Message;
 import fr.mathildeuh.sosstaff.ticket.Ticket;
@@ -26,13 +27,16 @@ public final class PlayerCommands {
     private final TicketService ticketService;
     private final ConfigManager configManager;
     private final LangManager langManager;
+    private final ChannelOrchestrator channelOrchestrator;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
-    public PlayerCommands(JavaPlugin plugin, TicketService ticketService, ConfigManager configManager, LangManager langManager) {
+    public PlayerCommands(JavaPlugin plugin, TicketService ticketService, ConfigManager configManager,
+                           LangManager langManager, ChannelOrchestrator channelOrchestrator) {
         this.plugin = plugin;
         this.ticketService = ticketService;
         this.configManager = configManager;
         this.langManager = langManager;
+        this.channelOrchestrator = channelOrchestrator;
     }
 
     public void register() {
@@ -90,8 +94,12 @@ public final class PlayerCommands {
 
     private void handleCreationResult(Player player, TicketCreationResult result) {
         switch (result) {
-            case TicketCreationResult.Created created ->
-                    send(player, Message.TICKET_CREATE_SUCCESS, Map.of("id", String.valueOf(created.ticket().id())));
+            case TicketCreationResult.Created created -> {
+                send(player, Message.TICKET_CREATE_SUCCESS, Map.of("id", String.valueOf(created.ticket().id())));
+                channelOrchestrator.createChannelForTicket(created.ticket(), player.getName())
+                        .thenAccept(channelId -> channelId.ifPresent(id ->
+                                ticketService.setDiscordChannelId(created.ticket().id(), id)));
+            }
             case TicketCreationResult.RejectedTooManyOpenTickets rejected ->
                     send(player, Message.TICKET_CREATE_REJECTED_TOO_MANY_OPEN,
                             Map.of("id", String.valueOf(rejected.existingTicket().id())));

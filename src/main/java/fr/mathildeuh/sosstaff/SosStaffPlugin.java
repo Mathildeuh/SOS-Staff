@@ -5,6 +5,8 @@ import fr.mathildeuh.sosstaff.command.PlayerCommands;
 import fr.mathildeuh.sosstaff.config.ConfigManager;
 import fr.mathildeuh.sosstaff.config.ConfigValidationException;
 import fr.mathildeuh.sosstaff.config.StorageType;
+import fr.mathildeuh.sosstaff.discord.ChannelOrchestrator;
+import fr.mathildeuh.sosstaff.discord.DiscordGateway;
 import fr.mathildeuh.sosstaff.lang.LangManager;
 import fr.mathildeuh.sosstaff.storage.migration.MigrationRunner;
 import fr.mathildeuh.sosstaff.storage.sqlite.SqliteDataSourceFactory;
@@ -25,6 +27,7 @@ public final class SosStaffPlugin extends JavaPlugin {
     private HikariDataSource dataSource;
     private ExecutorService storageExecutor;
     private TicketService ticketService;
+    private DiscordGateway discordGateway;
 
     @Override
     public void onEnable() {
@@ -64,13 +67,20 @@ public final class SosStaffPlugin extends JavaPlugin {
         TicketRepository ticketRepository = new SqliteTicketRepository(dataSource, storageExecutor);
         ticketService = new TicketService(ticketRepository, configManager);
 
-        new PlayerCommands(this, ticketService, configManager, langManager).register();
+        discordGateway = new DiscordGateway(getLogger());
+        discordGateway.start(configManager.discord().token());
+        ChannelOrchestrator channelOrchestrator = new ChannelOrchestrator(discordGateway, configManager, getLogger());
+
+        new PlayerCommands(this, ticketService, configManager, langManager, channelOrchestrator).register();
 
         getLogger().info("SOS-Staff has been enabled.");
     }
 
     @Override
     public void onDisable() {
+        if (discordGateway != null) {
+            discordGateway.stop();
+        }
         if (storageExecutor != null) {
             storageExecutor.shutdown();
         }
