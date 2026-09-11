@@ -220,6 +220,35 @@ public final class SqliteTicketRepository implements TicketRepository {
         });
     }
 
+    @Override
+    public CompletableFuture<Integer> deleteAllForPlayer(UUID playerUuid) {
+        return supply(() -> {
+            try (Connection connection = dataSource.getConnection()) {
+                connection.setAutoCommit(false);
+                try {
+                    String playerUuidString = playerUuid.toString();
+                    try (PreparedStatement deleteMessages = connection.prepareStatement(
+                            "DELETE FROM ticket_messages WHERE ticket_id IN (SELECT id FROM tickets WHERE player_uuid = ?)")) {
+                        deleteMessages.setString(1, playerUuidString);
+                        deleteMessages.executeUpdate();
+                    }
+                    int deletedTickets;
+                    try (PreparedStatement deleteTickets = connection.prepareStatement("DELETE FROM tickets WHERE player_uuid = ?")) {
+                        deleteTickets.setString(1, playerUuidString);
+                        deletedTickets = deleteTickets.executeUpdate();
+                    }
+                    connection.commit();
+                    return deletedTickets;
+                } catch (SQLException e) {
+                    connection.rollback();
+                    throw e;
+                } finally {
+                    connection.setAutoCommit(true);
+                }
+            }
+        });
+    }
+
     private static List<Ticket> mapAll(ResultSet resultSet) throws SQLException {
         List<Ticket> tickets = new ArrayList<>();
         while (resultSet.next()) {

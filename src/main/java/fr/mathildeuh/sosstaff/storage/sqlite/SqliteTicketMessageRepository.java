@@ -79,6 +79,21 @@ public final class SqliteTicketMessageRepository implements TicketMessageReposit
         return future;
     }
 
+    @Override
+    public CompletableFuture<Integer> deleteOlderThan(Instant cutoff) {
+        CompletableFuture<Integer> future = new CompletableFuture<>();
+        executor.execute(() -> {
+            try (Connection connection = dataSource.getConnection();
+                 PreparedStatement statement = connection.prepareStatement("DELETE FROM ticket_messages WHERE sent_at < ?")) {
+                statement.setTimestamp(1, Timestamp.from(cutoff));
+                future.complete(statement.executeUpdate());
+            } catch (SQLException e) {
+                future.completeExceptionally(e);
+            }
+        });
+        return future;
+    }
+
     private static TicketMessage map(ResultSet resultSet) throws SQLException {
         long id = resultSet.getLong("id");
         long ticketId = resultSet.getLong("ticket_id");

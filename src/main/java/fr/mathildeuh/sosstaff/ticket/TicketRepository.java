@@ -40,4 +40,13 @@ public interface TicketRepository {
     CompletableFuture<Void> close(long id, String closeReason);
 
     CompletableFuture<Void> setRating(long id, int rating);
+
+    /**
+     * GDPR erasure: deletes every ticket_messages row belonging to one of this player's tickets,
+     * then the tickets themselves, in one transaction (ticket_messages.ticket_id has a foreign
+     * key onto tickets(id), so the message rows must go first). Returns how many tickets were
+     * removed. Only erases tickets where this player is the reporter - a message they authored
+     * as staff inside someone else's ticket is untouched.
+     */
+    CompletableFuture<Integer> deleteAllForPlayer(UUID playerUuid);
 }
