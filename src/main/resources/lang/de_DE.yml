@@ -1,6 +1,9 @@
 creation:
   report:
     prompt: "Bitte beschreibe den Spieler, den du melden möchtest, mit Namen und einer Beschreibung des Vorfalls."
+  default:
+    prompt: "Bitte beschreibe dein Problem."
+  prompt-timed-out: "Du hast zu lange gebraucht; die Ticketerstellung wurde abgebrochen."
 
 general:
   reload-success: "Konfiguration und Sprachdateien wurden erfolgreich neu geladen."
@@ -30,3 +33,16 @@ ticket:
 
 chat:
   staff-reply: "<color:#5865F2>[Support]</color> <white>%author%</white>: %message%"
+
+gui:
+  creation:
+    title: "Neues Ticket"
+    write-your-own: "Selbst beschreiben"
+  admin-panel:
+    title: "SOS-Staff - Tickets"
+    ticket-lore: "%category% - %status% - %priority%"
+    filter-all: "Alle Tickets"
+
+admin:
+  attached-to-ticket: "Du bist jetzt mit Ticket #%id% verbunden - dein Chat wird zu Discord weitergeleitet."
+  no-permission: "Du hast dafür keine Berechtigung."

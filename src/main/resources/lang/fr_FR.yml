@@ -1,6 +1,9 @@
 creation:
   report:
     prompt: "Merci de décrire le joueur que vous souhaitez signaler, en précisant son nom et ce qui s'est passé."
+  default:
+    prompt: "Merci de décrire votre problème."
+  prompt-timed-out: "Vous avez mis trop de temps à répondre ; la création du ticket a été annulée."
 
 general:
   reload-success: "Configuration et fichiers de langue rechargés avec succès."
@@ -30,3 +33,16 @@ ticket:
 
 chat:
   staff-reply: "<color:#5865F2>[Support]</color> <white>%author%</white>: %message%"
+
+gui:
+  creation:
+    title: "Nouveau ticket"
+    write-your-own: "Décrire moi-même"
+  admin-panel:
+    title: "SOS-Staff - Tickets"
+    ticket-lore: "%category% - %status% - %priority%"
+    filter-all: "Tous les tickets"
+
+admin:
+  attached-to-ticket: "Vous êtes maintenant connecté au ticket #%id% - votre chat sera relayé vers Discord."
+  no-permission: "Vous n'avez pas la permission de faire ça."

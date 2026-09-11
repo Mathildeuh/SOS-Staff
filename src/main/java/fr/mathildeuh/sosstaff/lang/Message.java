@@ -18,7 +18,17 @@ public enum Message {
     TICKET_CLOSE_SUCCESS("ticket.close.success"),
     TICKET_CANCEL_NONE_ACTIVE("ticket.cancel.none-active"),
     TICKET_CANCEL_SUCCESS("ticket.cancel.success"),
-    CHAT_STAFF_REPLY("chat.staff-reply");
+    CHAT_STAFF_REPLY("chat.staff-reply"),
+
+    CREATION_DEFAULT_PROMPT("creation.default.prompt"),
+    CREATION_PROMPT_TIMED_OUT("creation.prompt-timed-out"),
+    GUI_CREATION_TITLE("gui.creation.title"),
+    GUI_CREATION_WRITE_YOUR_OWN("gui.creation.write-your-own"),
+    GUI_ADMIN_PANEL_TITLE("gui.admin-panel.title"),
+    GUI_ADMIN_PANEL_TICKET_LORE("gui.admin-panel.ticket-lore"),
+    GUI_ADMIN_PANEL_FILTER_ALL("gui.admin-panel.filter-all"),
+    ADMIN_ATTACHED_TO_TICKET("admin.attached-to-ticket"),
+    ADMIN_NO_PERMISSION("admin.no-permission");
 
     private final String key;
 

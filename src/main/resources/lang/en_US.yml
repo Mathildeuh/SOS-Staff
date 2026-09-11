@@ -1,6 +1,9 @@
 creation:
   report:
     prompt: "Please describe the player you want to report, including their name and what happened."
+  default:
+    prompt: "Please describe your issue."
+  prompt-timed-out: "You took too long to respond; ticket creation was cancelled."
 
 general:
   reload-success: "Configuration and language files reloaded successfully."
@@ -30,3 +33,16 @@ ticket:
 
 chat:
   staff-reply: "<color:#5865F2>[Support]</color> <white>%author%</white>: %message%"
+
+gui:
+  creation:
+    title: "New Ticket"
+    write-your-own: "Write your own"
+  admin-panel:
+    title: "SOS-Staff - Tickets"
+    ticket-lore: "%category% - %status% - %priority%"
+    filter-all: "All tickets"
+
+admin:
+  attached-to-ticket: "You are now attached to ticket #%id% - your chat will relay to Discord."
+  no-permission: "You don't have permission to do that."

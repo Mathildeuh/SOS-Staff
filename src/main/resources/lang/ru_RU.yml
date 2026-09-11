@@ -1,6 +1,9 @@
 creation:
   report:
     prompt: "Опишите игрока, на которого вы хотите подать жалобу, указав его имя и что произошло."
+  default:
+    prompt: "Опишите вашу проблему."
+  prompt-timed-out: "Вы слишком долго отвечали; создание тикета отменено."
 
 general:
   reload-success: "Конфигурация и языковые файлы успешно перезагружены."
@@ -30,3 +33,16 @@ ticket:
 
 chat:
   staff-reply: "<color:#5865F2>[Поддержка]</color> <white>%author%</white>: %message%"
+
+gui:
+  creation:
+    title: "Новый тикет"
+    write-your-own: "Написать самому"
+  admin-panel:
+    title: "SOS-Staff - Тикеты"
+    ticket-lore: "%category% - %status% - %priority%"
+    filter-all: "Все тикеты"
+
+admin:
+  attached-to-ticket: "Вы подключены к тикету #%id% - ваш чат будет транслироваться в Discord."
+  no-permission: "У вас нет прав для этого."

@@ -16,6 +16,10 @@ public final class LiveChatSessionManager {
     private final Map<UUID, TicketSession> byPlayer = new ConcurrentHashMap<>();
     private final Map<String, TicketSession> byChannelId = new ConcurrentHashMap<>();
 
+    // Separate from byPlayer: a staff member "attached" to a ticket from the admin panel is
+    // not that ticket's player, and closing the player's own session must never touch this.
+    private final Map<UUID, TicketSession> staffAttachments = new ConcurrentHashMap<>();
+
     public void open(TicketSession session) {
         byPlayer.put(session.playerUuid(), session);
         byChannelId.put(session.discordChannelId(), session);
@@ -33,6 +37,7 @@ public final class LiveChatSessionManager {
                 .filter(session -> session.ticketId() == ticketId)
                 .findFirst()
                 .ifPresent(session -> closeByPlayer(session.playerUuid()));
+        staffAttachments.values().removeIf(session -> session.ticketId() == ticketId);
     }
 
     public Optional<TicketSession> findByPlayer(UUID playerUuid) {
@@ -41,5 +46,17 @@ public final class LiveChatSessionManager {
 
     public Optional<TicketSession> findByChannelId(String discordChannelId) {
         return Optional.ofNullable(byChannelId.get(discordChannelId));
+    }
+
+    public void attachStaff(UUID staffUuid, TicketSession session) {
+        staffAttachments.put(staffUuid, session);
+    }
+
+    public void detachStaff(UUID staffUuid) {
+        staffAttachments.remove(staffUuid);
+    }
+
+    public Optional<TicketSession> findStaffAttachment(UUID staffUuid) {
+        return Optional.ofNullable(staffAttachments.get(staffUuid));
     }
 }
