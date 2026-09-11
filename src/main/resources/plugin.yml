@@ -1,0 +1,8 @@
+name: SOS-Staff
+prefix: [ SOS ]
+version: '${version}'
+
+main: fr.mathildeuh.sosstaff.Sos_Staff
+api-version: '26.1'
+
+authors: [ Mathildeuh ]
