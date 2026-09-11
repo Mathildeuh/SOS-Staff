@@ -1,0 +1,101 @@
+commands:
+  main: "ticket"
+  aliases: ["support", "sos"]
+
+creation-mode: BOTH        # PRESET | FREE_INPUT | BOTH
+creation-ui: GUI           # GUI | CHAT
+
+categories:
+  bug:
+    display-name: "Bug / Technical issue"
+    icon: BOOK
+    color: "#5865F2"
+    mode: PRESET
+    presets: ["Item duplication", "Crash on world load", "Other technical bug"]
+    ping-role: "123456789012345678"
+  report:
+    display-name: "Report a player"
+    icon: IRON_SWORD
+    color: "#ED4245"
+    mode: FREE_INPUT
+    prompt-key: "creation.report.prompt"
+
+discord:
+  token: ""                # set via the SOSSTAFF_DISCORD_TOKEN environment variable in production, never commit a real token
+  category:
+    name: "Ticket Support"
+    auto-create: true
+    archived-category-name: "Archived Tickets"
+  channel:
+    name-format: "ticket-%id%-%player%"
+    topic-format: "Ticket #%id% - %category% - Priority: %priority%"
+  permissions:
+    staff-roles: ["123456789012345678"]
+    hide-from-everyone: true
+    creator-can-see: true
+  mentions:
+    on-create:
+      roles: ["123456789012345678"]
+      message: "New ticket from **%player%** - %category%"
+    on-escalate:
+      message: "Ticket #%id% unanswered for %minutes% min"
+  on-close:
+    action: ARCHIVE
+    lock-channel: true
+    auto-delete-after-days: 7
+  action-buttons:
+    heal-player:
+      enabled: true
+      label: "Heal"
+      command: HEAL
+      permission: "sosstaff.action.heal-player"
+      requires-online: true
+    feed-player:
+      enabled: true
+      label: "Feed"
+      command: FEED
+      permission: "sosstaff.action.feed-player"
+      requires-online: true
+    force-reconnect:
+      enabled: true
+      label: "Force Reconnect"
+      command: KICK
+      permission: "sosstaff.action.force-reconnect"
+      requires-online: true
+      confirm: true
+      kick-reason: "Reconnection requested by support - %staff%"
+    teleport-spawn:
+      enabled: false
+      label: "TP Spawn"
+      command: "tp %player% 0 100 0"
+      permission: "sosstaff.action.teleport-spawn"
+      requires-online: true
+
+escalation:
+  enabled: true
+  no-claim-after-minutes: 15
+
+anti-spam:
+  max-open-tickets-per-player: 1
+  cooldown-after-close-seconds: 30
+  bypass-permission: "sosstaff.bypass.antispam"
+
+storage:
+  type: SQLITE              # SQLITE | MYSQL
+  mysql:
+    host: "localhost"
+    port: 3306
+    database: "sosstaff"
+    username: ""
+    password: ""
+
+gdpr:
+  transcript-retention-days: 90
+
+update-checker:
+  enabled: true
+
+language:
+  default: "en_US"
+  shipped: ["en_US", "fr_FR", "es_ES", "ru_RU", "de_DE"]
+  per-player: false
