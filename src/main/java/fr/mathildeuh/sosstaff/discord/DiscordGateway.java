@@ -19,7 +19,7 @@ public final class DiscordGateway {
         this.logger = logger;
     }
 
-    public boolean start(String token) {
+    public boolean start(String token, Object... eventListeners) {
         if (token == null || token.isBlank()) {
             logger.warning("No Discord bot token configured (discord.token / SOSSTAFF_DISCORD_TOKEN); "
                     + "the Discord bridge stays disabled and tickets will only exist in-game.");
@@ -28,6 +28,7 @@ public final class DiscordGateway {
 
         try {
             jda = JDABuilder.createLight(token, GatewayIntent.GUILD_MESSAGES, GatewayIntent.MESSAGE_CONTENT)
+                    .addEventListeners(eventListeners)
                     .build();
             return true;
         } catch (InvalidTokenException e) {

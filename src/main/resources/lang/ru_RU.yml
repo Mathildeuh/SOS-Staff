@@ -27,3 +27,6 @@ ticket:
   cancel:
     none-active: "У вас нет активного тикета для отмены."
     success: "Тикет #%id% отменён."
+
+chat:
+  staff-reply: "<color:#5865F2>[Поддержка]</color> <white>%author%</white>: %message%"

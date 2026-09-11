@@ -4,6 +4,8 @@ import fr.mathildeuh.sosstaff.config.ConfigManager;
 import fr.mathildeuh.sosstaff.discord.ChannelOrchestrator;
 import fr.mathildeuh.sosstaff.lang.LangManager;
 import fr.mathildeuh.sosstaff.lang.Message;
+import fr.mathildeuh.sosstaff.session.LiveChatSessionManager;
+import fr.mathildeuh.sosstaff.session.TicketSession;
 import fr.mathildeuh.sosstaff.ticket.Ticket;
 import fr.mathildeuh.sosstaff.ticket.TicketCreationResult;
 import fr.mathildeuh.sosstaff.ticket.TicketPriority;
@@ -28,15 +30,18 @@ public final class PlayerCommands {
     private final ConfigManager configManager;
     private final LangManager langManager;
     private final ChannelOrchestrator channelOrchestrator;
+    private final LiveChatSessionManager sessionManager;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
     public PlayerCommands(JavaPlugin plugin, TicketService ticketService, ConfigManager configManager,
-                           LangManager langManager, ChannelOrchestrator channelOrchestrator) {
+                           LangManager langManager, ChannelOrchestrator channelOrchestrator,
+                           LiveChatSessionManager sessionManager) {
         this.plugin = plugin;
         this.ticketService = ticketService;
         this.configManager = configManager;
         this.langManager = langManager;
         this.channelOrchestrator = channelOrchestrator;
+        this.sessionManager = sessionManager;
     }
 
     public void register() {
@@ -97,8 +102,10 @@ public final class PlayerCommands {
             case TicketCreationResult.Created created -> {
                 send(player, Message.TICKET_CREATE_SUCCESS, Map.of("id", String.valueOf(created.ticket().id())));
                 channelOrchestrator.createChannelForTicket(created.ticket(), player.getName())
-                        .thenAccept(channelId -> channelId.ifPresent(id ->
-                                ticketService.setDiscordChannelId(created.ticket().id(), id)));
+                        .thenAccept(channelId -> channelId.ifPresent(id -> {
+                            ticketService.setDiscordChannelId(created.ticket().id(), id);
+                            sessionManager.open(new TicketSession(player.getUniqueId(), created.ticket().id(), id));
+                        }));
             }
             case TicketCreationResult.RejectedTooManyOpenTickets rejected ->
                     send(player, Message.TICKET_CREATE_REJECTED_TOO_MANY_OPEN,
@@ -117,8 +124,10 @@ public final class PlayerCommands {
                         return java.util.concurrent.CompletableFuture.completedFuture(null);
                     }
                     String effectiveReason = reason.isBlank() ? "Closed by the player" : reason;
-                    return ticketService.close(active.get().id(), effectiveReason).thenAccept(closed ->
-                            runOnMainThread(() -> send(player, successMessage, Map.of("id", String.valueOf(closed.id())))));
+                    return ticketService.close(active.get().id(), effectiveReason).thenAccept(closed -> {
+                        sessionManager.closeByTicketId(closed.id());
+                        runOnMainThread(() -> send(player, successMessage, Map.of("id", String.valueOf(closed.id()))));
+                    });
                 })
                 .exceptionally(throwable -> logFailure(player, "close your ticket", throwable));
     }

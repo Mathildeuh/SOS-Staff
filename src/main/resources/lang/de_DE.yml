@@ -27,3 +27,6 @@ ticket:
   cancel:
     none-active: "Du hast kein aktives Ticket zum Abbrechen."
     success: "Ticket #%id% abgebrochen."
+
+chat:
+  staff-reply: "<color:#5865F2>[Support]</color> <white>%author%</white>: %message%"

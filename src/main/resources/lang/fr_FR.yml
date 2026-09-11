@@ -27,3 +27,6 @@ ticket:
   cancel:
     none-active: "Vous n'avez pas de ticket actif à annuler."
     success: "Ticket #%id% annulé."
+
+chat:
+  staff-reply: "<color:#5865F2>[Support]</color> <white>%author%</white>: %message%"

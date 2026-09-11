@@ -7,11 +7,17 @@ import fr.mathildeuh.sosstaff.config.ConfigValidationException;
 import fr.mathildeuh.sosstaff.config.StorageType;
 import fr.mathildeuh.sosstaff.discord.ChannelOrchestrator;
 import fr.mathildeuh.sosstaff.discord.DiscordGateway;
+import fr.mathildeuh.sosstaff.discord.DiscordMessageListener;
+import fr.mathildeuh.sosstaff.discord.WebhookRelay;
 import fr.mathildeuh.sosstaff.lang.LangManager;
+import fr.mathildeuh.sosstaff.session.LiveChatListener;
+import fr.mathildeuh.sosstaff.session.LiveChatSessionManager;
 import fr.mathildeuh.sosstaff.storage.migration.MigrationRunner;
 import fr.mathildeuh.sosstaff.storage.sqlite.SqliteDataSourceFactory;
 import fr.mathildeuh.sosstaff.storage.sqlite.SqliteMigrations;
+import fr.mathildeuh.sosstaff.storage.sqlite.SqliteTicketMessageRepository;
 import fr.mathildeuh.sosstaff.storage.sqlite.SqliteTicketRepository;
+import fr.mathildeuh.sosstaff.ticket.TicketMessageRepository;
 import fr.mathildeuh.sosstaff.ticket.TicketRepository;
 import fr.mathildeuh.sosstaff.ticket.TicketService;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -28,6 +34,7 @@ public final class SosStaffPlugin extends JavaPlugin {
     private ExecutorService storageExecutor;
     private TicketService ticketService;
     private DiscordGateway discordGateway;
+    private LiveChatListener liveChatListener;
 
     @Override
     public void onEnable() {
@@ -66,12 +73,24 @@ public final class SosStaffPlugin extends JavaPlugin {
         });
         TicketRepository ticketRepository = new SqliteTicketRepository(dataSource, storageExecutor);
         ticketService = new TicketService(ticketRepository, configManager);
+        TicketMessageRepository ticketMessageRepository = new SqliteTicketMessageRepository(dataSource, storageExecutor);
+
+        LiveChatSessionManager sessionManager = new LiveChatSessionManager();
 
         discordGateway = new DiscordGateway(getLogger());
-        discordGateway.start(configManager.discord().token());
-        ChannelOrchestrator channelOrchestrator = new ChannelOrchestrator(discordGateway, configManager, getLogger());
+        DiscordMessageListener discordMessageListener =
+                new DiscordMessageListener(this, sessionManager, ticketMessageRepository, langManager);
+        discordGateway.start(configManager.discord().token(), discordMessageListener);
 
-        new PlayerCommands(this, ticketService, configManager, langManager, channelOrchestrator).register();
+        ChannelOrchestrator channelOrchestrator = new ChannelOrchestrator(discordGateway, configManager, getLogger());
+        WebhookRelay webhookRelay = new WebhookRelay(discordGateway, getLogger());
+
+        liveChatListener = new LiveChatListener(sessionManager, webhookRelay, ticketMessageRepository, ticketService, getLogger());
+        getServer().getPluginManager().registerEvents(liveChatListener, this);
+
+        new PlayerCommands(this, ticketService, configManager, langManager, channelOrchestrator, sessionManager).register();
+
+        getServer().getOnlinePlayers().forEach(liveChatListener::reopenSessionIfNeeded);
 
         getLogger().info("SOS-Staff has been enabled.");
     }

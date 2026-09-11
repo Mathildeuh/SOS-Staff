@@ -17,7 +17,8 @@ public enum Message {
     TICKET_CLOSE_NONE_ACTIVE("ticket.close.none-active"),
     TICKET_CLOSE_SUCCESS("ticket.close.success"),
     TICKET_CANCEL_NONE_ACTIVE("ticket.cancel.none-active"),
-    TICKET_CANCEL_SUCCESS("ticket.cancel.success");
+    TICKET_CANCEL_SUCCESS("ticket.cancel.success"),
+    CHAT_STAFF_REPLY("chat.staff-reply");
 
     private final String key;
 
