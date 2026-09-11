@@ -1,21 +1,19 @@
 package fr.mathildeuh.sosstaff.command;
 
 import fr.mathildeuh.sosstaff.config.ConfigManager;
-import fr.mathildeuh.sosstaff.discord.ChannelOrchestrator;
+import fr.mathildeuh.sosstaff.gui.CreationMenu;
 import fr.mathildeuh.sosstaff.lang.LangManager;
 import fr.mathildeuh.sosstaff.lang.Message;
 import fr.mathildeuh.sosstaff.session.LiveChatSessionManager;
-import fr.mathildeuh.sosstaff.session.TicketSession;
 import fr.mathildeuh.sosstaff.ticket.Ticket;
+import fr.mathildeuh.sosstaff.ticket.TicketCreationCoordinator;
 import fr.mathildeuh.sosstaff.ticket.TicketCreationResult;
 import fr.mathildeuh.sosstaff.ticket.TicketPriority;
 import fr.mathildeuh.sosstaff.ticket.TicketService;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.incendo.cloud.execution.ExecutionCoordinator;
 import org.incendo.cloud.paper.PaperCommandManager;
-import org.incendo.cloud.paper.util.sender.PaperSimpleSenderMapper;
 import org.incendo.cloud.paper.util.sender.PlayerSource;
 import org.incendo.cloud.paper.util.sender.Source;
 import org.incendo.cloud.parser.standard.StringParser;
@@ -29,27 +27,24 @@ public final class PlayerCommands {
     private final TicketService ticketService;
     private final ConfigManager configManager;
     private final LangManager langManager;
-    private final ChannelOrchestrator channelOrchestrator;
     private final LiveChatSessionManager sessionManager;
+    private final TicketCreationCoordinator creationCoordinator;
+    private final CreationMenu creationMenu;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
     public PlayerCommands(JavaPlugin plugin, TicketService ticketService, ConfigManager configManager,
-                           LangManager langManager, ChannelOrchestrator channelOrchestrator,
-                           LiveChatSessionManager sessionManager) {
+                           LangManager langManager, LiveChatSessionManager sessionManager,
+                           TicketCreationCoordinator creationCoordinator, CreationMenu creationMenu) {
         this.plugin = plugin;
         this.ticketService = ticketService;
         this.configManager = configManager;
         this.langManager = langManager;
-        this.channelOrchestrator = channelOrchestrator;
         this.sessionManager = sessionManager;
+        this.creationCoordinator = creationCoordinator;
+        this.creationMenu = creationMenu;
     }
 
-    public void register() {
-        PaperCommandManager<Source> commandManager = PaperCommandManager
-                .builder(PaperSimpleSenderMapper.simpleSenderMapper())
-                .executionCoordinator(ExecutionCoordinator.simpleCoordinator())
-                .buildOnEnable(plugin);
-
+    public void register(PaperCommandManager<Source> commandManager) {
         String main = configManager.commandMain();
         String[] aliases = configManager.commandAliases().toArray(new String[0]);
 
@@ -75,14 +70,15 @@ public final class PlayerCommands {
                         Message.TICKET_CLOSE_NONE_ACTIVE,
                         Message.TICKET_CLOSE_SUCCESS)));
 
-        // No free-text "message" argument yet: there is nowhere to persist it until the
-        // ticket_messages-backed chat system lands, so the command only takes a category
-        // for now and the initial description is entered through live chat once claimed.
+        // /ticket new with no category opens the GUI; /ticket new <category> stays as a
+        // text-mode shortcut for players who'd rather type it (skips the preset/free-input
+        // step the GUI would otherwise walk them through - it always creates with no message).
+        commandManager.command(root.literal("new")
+                .handler(context -> creationMenu.open(context.sender().source())));
+
         commandManager.command(root.literal("new")
                 .required("category", StringParser.<Source>stringParser())
-                .handler(context -> createTicket(
-                        context.sender().source(),
-                        context.get("category"))));
+                .handler(context -> createTicket(context.sender().source(), context.get("category"))));
     }
 
     private void createTicket(Player player, String category) {
@@ -92,21 +88,15 @@ public final class PlayerCommands {
         }
 
         boolean bypass = player.hasPermission(configManager.antiSpamBypassPermission());
-        ticketService.createTicket(player.getUniqueId(), category, TicketPriority.MEDIUM, bypass)
+        creationCoordinator.create(player.getUniqueId(), player.getName(), category, TicketPriority.MEDIUM, bypass, null)
                 .thenAccept(result -> runOnMainThread(() -> handleCreationResult(player, result)))
                 .exceptionally(throwable -> logFailure(player, "create a ticket", throwable));
     }
 
     private void handleCreationResult(Player player, TicketCreationResult result) {
         switch (result) {
-            case TicketCreationResult.Created created -> {
-                send(player, Message.TICKET_CREATE_SUCCESS, Map.of("id", String.valueOf(created.ticket().id())));
-                channelOrchestrator.createChannelForTicket(created.ticket(), player.getName())
-                        .thenAccept(channelId -> channelId.ifPresent(id -> {
-                            ticketService.setDiscordChannelId(created.ticket().id(), id);
-                            sessionManager.open(new TicketSession(player.getUniqueId(), created.ticket().id(), id));
-                        }));
-            }
+            case TicketCreationResult.Created created ->
+                    send(player, Message.TICKET_CREATE_SUCCESS, Map.of("id", String.valueOf(created.ticket().id())));
             case TicketCreationResult.RejectedTooManyOpenTickets rejected ->
                     send(player, Message.TICKET_CREATE_REJECTED_TOO_MANY_OPEN,
                             Map.of("id", String.valueOf(rejected.existingTicket().id())));
