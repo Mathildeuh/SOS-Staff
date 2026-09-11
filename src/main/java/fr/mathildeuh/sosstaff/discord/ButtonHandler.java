@@ -34,14 +34,17 @@ public final class ButtonHandler {
     private final ConfigManager configManager;
     private final TicketMessageRepository messageRepository;
     private final LiveChatSessionManager sessionManager;
+    private final EscalationScheduler escalationScheduler;
 
     public ButtonHandler(JavaPlugin plugin, TicketService ticketService, ConfigManager configManager,
-                          TicketMessageRepository messageRepository, LiveChatSessionManager sessionManager) {
+                          TicketMessageRepository messageRepository, LiveChatSessionManager sessionManager,
+                          EscalationScheduler escalationScheduler) {
         this.plugin = plugin;
         this.ticketService = ticketService;
         this.configManager = configManager;
         this.messageRepository = messageRepository;
         this.sessionManager = sessionManager;
+        this.escalationScheduler = escalationScheduler;
     }
 
     public void handle(ButtonInteractionEvent event, String action, long ticketId) {
@@ -77,6 +80,7 @@ public final class ButtonHandler {
 
     private void handleReopen(ButtonInteractionEvent event, long ticketId) {
         event.deferEdit().queue();
+        escalationScheduler.onTicketNoLongerPending(ticketId);
         ticketService.reopen(ticketId).thenAccept(ticket -> updateEmbed(event, ticket));
     }
 
