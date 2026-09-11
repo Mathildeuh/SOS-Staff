@@ -11,6 +11,9 @@ repositories {
 dependencies {
     compileOnly("io.papermc.paper:paper-api:26.2.build.+")
 
+    implementation("com.zaxxer:HikariCP:7.1.0")
+    implementation("org.xerial:sqlite-jdbc:3.53.4.0")
+
     testImplementation("io.papermc.paper:paper-api:26.2.build.+")
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
@@ -29,6 +32,14 @@ tasks {
 
     test {
         useJUnitPlatform()
+    }
+
+    shadowJar {
+        val libs = "fr.mathildeuh.sosstaff.libs"
+        relocate("com.zaxxer.hikari", "$libs.hikari")
+        // org.sqlite is intentionally NOT relocated: its native-library loader resolves
+        // bundled .so/.dll/.dylib resources through hardcoded org/sqlite/native paths,
+        // and relocating the package is a known way to break that lookup at runtime.
     }
 
     processResources {
