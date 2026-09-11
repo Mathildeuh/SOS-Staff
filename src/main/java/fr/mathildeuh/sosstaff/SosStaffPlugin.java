@@ -1,6 +1,7 @@
 package fr.mathildeuh.sosstaff;
 
 import com.zaxxer.hikari.HikariDataSource;
+import fr.mathildeuh.sosstaff.command.AdminCommands;
 import fr.mathildeuh.sosstaff.command.PlayerCommands;
 import fr.mathildeuh.sosstaff.config.ConfigManager;
 import fr.mathildeuh.sosstaff.config.ConfigValidationException;
@@ -15,6 +16,11 @@ import fr.mathildeuh.sosstaff.discord.FreezeListener;
 import fr.mathildeuh.sosstaff.discord.FrozenPlayers;
 import fr.mathildeuh.sosstaff.discord.InternalActionRegistry;
 import fr.mathildeuh.sosstaff.discord.WebhookRelay;
+import fr.mathildeuh.sosstaff.gui.AdminPanel;
+import fr.mathildeuh.sosstaff.gui.AnvilInputGui;
+import fr.mathildeuh.sosstaff.gui.CreationMenu;
+import fr.mathildeuh.sosstaff.gui.GuiClickListener;
+import fr.mathildeuh.sosstaff.gui.PendingChatPrompts;
 import fr.mathildeuh.sosstaff.lang.LangManager;
 import fr.mathildeuh.sosstaff.session.LiveChatListener;
 import fr.mathildeuh.sosstaff.session.LiveChatSessionManager;
@@ -23,10 +29,15 @@ import fr.mathildeuh.sosstaff.storage.sqlite.SqliteDataSourceFactory;
 import fr.mathildeuh.sosstaff.storage.sqlite.SqliteMigrations;
 import fr.mathildeuh.sosstaff.storage.sqlite.SqliteTicketMessageRepository;
 import fr.mathildeuh.sosstaff.storage.sqlite.SqliteTicketRepository;
+import fr.mathildeuh.sosstaff.ticket.TicketCreationCoordinator;
 import fr.mathildeuh.sosstaff.ticket.TicketMessageRepository;
 import fr.mathildeuh.sosstaff.ticket.TicketRepository;
 import fr.mathildeuh.sosstaff.ticket.TicketService;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.incendo.cloud.execution.ExecutionCoordinator;
+import org.incendo.cloud.paper.PaperCommandManager;
+import org.incendo.cloud.paper.util.sender.PaperSimpleSenderMapper;
+import org.incendo.cloud.paper.util.sender.Source;
 
 import java.sql.SQLException;
 import java.util.concurrent.ExecutorService;
@@ -81,6 +92,7 @@ public final class SosStaffPlugin extends JavaPlugin {
         TicketMessageRepository ticketMessageRepository = new SqliteTicketMessageRepository(dataSource, storageExecutor);
 
         LiveChatSessionManager sessionManager = new LiveChatSessionManager();
+        PendingChatPrompts pendingChatPrompts = new PendingChatPrompts();
 
         FrozenPlayers frozenPlayers = new FrozenPlayers();
         InternalActionRegistry internalActionRegistry = new InternalActionRegistry(frozenPlayers);
@@ -95,13 +107,27 @@ public final class SosStaffPlugin extends JavaPlugin {
 
         ChannelOrchestrator channelOrchestrator = new ChannelOrchestrator(discordGateway, configManager, getLogger());
         WebhookRelay webhookRelay = new WebhookRelay(discordGateway, getLogger());
+        TicketCreationCoordinator creationCoordinator =
+                new TicketCreationCoordinator(ticketService, channelOrchestrator, sessionManager, ticketMessageRepository, webhookRelay);
 
-        LiveChatListener liveChatListener =
-                new LiveChatListener(sessionManager, webhookRelay, ticketMessageRepository, ticketService, getLogger());
+        LiveChatListener liveChatListener = new LiveChatListener(
+                sessionManager, webhookRelay, ticketMessageRepository, ticketService, pendingChatPrompts, getLogger());
         getServer().getPluginManager().registerEvents(liveChatListener, this);
         getServer().getPluginManager().registerEvents(new FreezeListener(frozenPlayers), this);
 
-        new PlayerCommands(this, ticketService, configManager, langManager, channelOrchestrator, sessionManager).register();
+        AnvilInputGui anvilInputGui = new AnvilInputGui();
+        getServer().getPluginManager().registerEvents(anvilInputGui, this);
+        CreationMenu creationMenu = new CreationMenu(this, configManager, langManager, creationCoordinator, anvilInputGui, pendingChatPrompts);
+        AdminPanel adminPanel = new AdminPanel(this, ticketService, configManager, langManager, sessionManager);
+        getServer().getPluginManager().registerEvents(new GuiClickListener(creationMenu, adminPanel), this);
+
+        PaperCommandManager<Source> commandManager = PaperCommandManager
+                .builder(PaperSimpleSenderMapper.simpleSenderMapper())
+                .executionCoordinator(ExecutionCoordinator.simpleCoordinator())
+                .buildOnEnable(this);
+        new PlayerCommands(this, ticketService, configManager, langManager, sessionManager, creationCoordinator, creationMenu)
+                .register(commandManager);
+        new AdminCommands(adminPanel).register(commandManager);
 
         getServer().getOnlinePlayers().forEach(liveChatListener::reopenSessionIfNeeded);
 
