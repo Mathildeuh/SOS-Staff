@@ -47,7 +47,7 @@ public final class WebhookRelay {
      */
     private CompletableFuture<Void> relayPlayerMessage(String discordChannelId, UUID playerUuid, String playerName,
                                                          String content, boolean allowRetryOnStaleWebhook) {
-        return webhookClientFor(discordChannelId).thenCompose(clientOpt -> {
+        return webhookClientFor(discordChannelId, false).thenCompose(clientOpt -> {
             if (clientOpt.isEmpty()) {
                 return CompletableFuture.completedFuture(null);
             }
@@ -58,14 +58,10 @@ public final class WebhookRelay {
                     .queue(ignored -> future.complete(null), throwable -> {
                         if (allowRetryOnStaleWebhook && ErrorResponse.UNKNOWN_WEBHOOK.test(throwable)) {
                             clientsByChannelId.remove(discordChannelId);
-                            relayPlayerMessage(discordChannelId, playerUuid, playerName, content, false)
-                                    .whenComplete((ignored2, retryError) -> {
-                                        if (retryError != null) {
-                                            future.completeExceptionally(retryError);
-                                        } else {
-                                            future.complete(null);
-                                        }
-                                    });
+                            // Re-listing webhooks by name here would very likely turn up the exact
+                            // same broken entry that just failed, so the retry skips straight to
+                            // creating a brand new webhook instead of looking for an "existing" one.
+                            retryWithFreshWebhook(discordChannelId, playerUuid, playerName, content, future);
                         } else {
                             future.completeExceptionally(throwable);
                         }
@@ -74,10 +70,33 @@ public final class WebhookRelay {
         });
     }
 
-    private CompletableFuture<Optional<IncomingWebhookClient>> webhookClientFor(String discordChannelId) {
-        IncomingWebhookClient cached = clientsByChannelId.get(discordChannelId);
-        if (cached != null) {
-            return CompletableFuture.completedFuture(Optional.of(cached));
+    private void retryWithFreshWebhook(String discordChannelId, UUID playerUuid, String playerName,
+                                        String content, CompletableFuture<Void> future) {
+        webhookClientFor(discordChannelId, true).thenCompose(clientOpt -> {
+            if (clientOpt.isEmpty()) {
+                return CompletableFuture.<Void>completedFuture(null);
+            }
+            CompletableFuture<Void> retryFuture = new CompletableFuture<>();
+            clientOpt.get().sendMessage(content)
+                    .setUsername(playerName)
+                    .setAvatarUrl(SkinRenderer.avatarUrl(playerUuid))
+                    .queue(ignored -> retryFuture.complete(null), retryFuture::completeExceptionally);
+            return retryFuture;
+        }).whenComplete((ignored, error) -> {
+            if (error != null) {
+                future.completeExceptionally(error);
+            } else {
+                future.complete(null);
+            }
+        });
+    }
+
+    private CompletableFuture<Optional<IncomingWebhookClient>> webhookClientFor(String discordChannelId, boolean forceCreateNew) {
+        if (!forceCreateNew) {
+            IncomingWebhookClient cached = clientsByChannelId.get(discordChannelId);
+            if (cached != null) {
+                return CompletableFuture.completedFuture(Optional.of(cached));
+            }
         }
 
         Optional<JDA> jdaOpt = gateway.jda();
@@ -89,6 +108,14 @@ public final class WebhookRelay {
         if (channel == null) {
             logger.warning("Discord channel " + discordChannelId + " no longer exists; cannot relay chat into it.");
             return CompletableFuture.completedFuture(Optional.empty());
+        }
+
+        if (forceCreateNew) {
+            CompletableFuture<Optional<IncomingWebhookClient>> future = new CompletableFuture<>();
+            channel.createWebhook(WEBHOOK_NAME).queue(
+                    created -> future.complete(Optional.of(cacheClient(discordChannelId, created, jdaOpt.get()))),
+                    future::completeExceptionally);
+            return future;
         }
 
         CompletableFuture<Optional<IncomingWebhookClient>> future = new CompletableFuture<>();
