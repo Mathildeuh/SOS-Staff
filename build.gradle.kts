@@ -22,6 +22,10 @@ scmVersion {
             else -> context.currentVersion.incrementPatchVersion()
         }
     })
+    // snapshotCreator returns the suffix appended to the version when not on a tag (default:
+    // "-SNAPSHOT") - an empty one means plugin.yml/version.properties always show the plain next
+    // version (e.g. "0.1.0"), never "0.1.0-SNAPSHOT".
+    snapshotCreator({ _, _ -> "" })
 }
 version = scmVersion.version
 
