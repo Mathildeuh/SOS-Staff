@@ -73,18 +73,30 @@ public final class PlayerCommands {
                         Message.TICKET_CLOSE_NONE_ACTIVE,
                         Message.TICKET_CLOSE_SUCCESS)));
 
-        // /ticket new with no category opens the GUI; /ticket new <category> stays as a
-        // text-mode shortcut for players who'd rather type it (skips the preset/free-input
-        // step the GUI would otherwise walk them through - it always creates with no message).
+        // /ticket new opens the category/preset panel; /ticket new <category> stays as a
+        // text-mode shortcut for players who'd rather type it (skips the preset step - it
+        // always creates with no message). /ticket <reason...> is the fast path: one command,
+        // one step, using the first configured category as the default.
         commandManager.command(root.literal("new")
                 .handler(context -> creationMenu.open(context.sender().source())));
 
         commandManager.command(root.literal("new")
                 .required("category", StringParser.<Source>stringParser())
-                .handler(context -> createTicket(context.sender().source(), context.get("category"))));
+                .handler(context -> createTicket(context.sender().source(), context.get("category"), null)));
+
+        commandManager.command(root.required("reason", StringParser.<Source>greedyStringParser())
+                .handler(context -> createTicketWithDefaultCategory(context.sender().source(), context.get("reason"))));
     }
 
-    private void createTicket(Player player, String category) {
+    private void createTicketWithDefaultCategory(Player player, String reason) {
+        var categoryIds = configManager.categories().keySet();
+        if (categoryIds.isEmpty()) {
+            return;
+        }
+        createTicket(player, categoryIds.iterator().next(), reason);
+    }
+
+    private void createTicket(Player player, String category, String initialMessage) {
         if (!configManager.categories().containsKey(category)) {
             send(player, Message.TICKET_CREATE_UNKNOWN_CATEGORY, Map.of("category", category));
             return;
@@ -96,7 +108,7 @@ public final class PlayerCommands {
         }
 
         boolean bypass = player.hasPermission(configManager.antiSpamBypassPermission());
-        creationCoordinator.create(player.getUniqueId(), player.getName(), category, TicketPriority.MEDIUM, bypass, null)
+        creationCoordinator.create(player.getUniqueId(), player.getName(), category, TicketPriority.MEDIUM, bypass, initialMessage)
                 .thenAccept(result -> runOnPlayerThread(player, () -> handleCreationResult(player, result)))
                 .exceptionally(throwable -> logFailure(player, "create a ticket", throwable));
     }
