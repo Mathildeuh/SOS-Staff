@@ -129,6 +129,12 @@ actually publish anything (it will simply fail those specific steps until they a
 GitHub Actions and needs no setup. The bStats service id in `SosStaffPlugin` is already
 registered.
 
+## Store listings
+
+Ready-to-paste project descriptions for each distribution platform, in that platform's own
+markup, live under [`store/`](store/): [`modrinth.md`](store/modrinth.md) and
+[`hangar.md`](store/hangar.md) (Markdown), [`spigotmc.bbcode`](store/spigotmc.bbcode) (BBCode).
+
 ## License
 
 GPL-3.0 - see [LICENSE](LICENSE). No license keys, activation, or premium tiers exist or are
