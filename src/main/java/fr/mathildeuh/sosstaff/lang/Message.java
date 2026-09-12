@@ -22,6 +22,7 @@ public enum Message {
     TICKET_REOPEN_NOTIFY("ticket.reopen.notify"),
     TICKET_CLAIM_NOTIFY("ticket.claim.notify"),
     TICKET_PRIORITY_NOTIFY("ticket.priority.notify"),
+    TICKET_REPLY_SENT("ticket.reply.sent"),
     CHAT_STAFF_REPLY("chat.staff-reply"),
 
     CREATION_DEFAULT_PROMPT("creation.default.prompt"),

@@ -37,6 +37,8 @@ ticket:
     notify: "<color:#57F287>%staff%</color> is now handling your ticket #%id%."
   priority:
     notify: "The priority of your ticket #%id% is now <color:#FF5A36>%priority%</color>."
+  reply:
+    sent: "<color:#57F287>Message sent to your ticket #%id%.</color>"
 
 chat:
   staff-reply: "<color:#5865F2>[Support]</color> <white>%author%</white>: %message%"

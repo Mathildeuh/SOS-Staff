@@ -41,6 +41,20 @@ public final class LiveChatListener implements Listener {
         this.logger = logger;
     }
 
+    /**
+     * Relays a single message into a ticket outside of normal live chat - used by
+     * {@code /ticket <message>} when the player already has an active ticket, so they can reply
+     * without needing an open chat session (e.g. right after logging back in). Opens/refreshes
+     * the session as a side effect, same as a join would, so any further plain chat also relays.
+     */
+    public void relayPlayerReply(Ticket ticket, Player player, String content) {
+        if (ticket.discordChannelId() == null) {
+            return;
+        }
+        sessionManager.open(new TicketSession(player.getUniqueId(), ticket.id(), ticket.discordChannelId()));
+        fireAndRelay(ticket, ticket.discordChannelId(), player, content, false);
+    }
+
     @EventHandler(priority = EventPriority.LOW)
     public void onChat(AsyncChatEvent event) {
         Player player = event.getPlayer();

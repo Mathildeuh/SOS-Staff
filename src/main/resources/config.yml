@@ -4,7 +4,17 @@ commands:
 
 creation-mode: BOTH        # PRESET | FREE_INPUT | BOTH
 
+# Category used by the fast "/ticket <reason>" path, which has no category-picking step of its
+# own - must be one of the ids under categories below.
+default-category: other
+
 categories:
+  other:
+    display-name: "General help"
+    icon: PAPER
+    color: "#57F287"
+    mode: FREE_INPUT
+    prompt-key: "creation.default.prompt"
   bug:
     display-name: "Bug / Technical issue"
     icon: BOOK

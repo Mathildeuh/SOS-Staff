@@ -7,6 +7,7 @@ import fr.mathildeuh.sosstaff.discord.ChannelOrchestrator;
 import fr.mathildeuh.sosstaff.gui.CreationMenu;
 import fr.mathildeuh.sosstaff.lang.LangManager;
 import fr.mathildeuh.sosstaff.lang.Message;
+import fr.mathildeuh.sosstaff.session.LiveChatListener;
 import fr.mathildeuh.sosstaff.session.LiveChatSessionManager;
 import fr.mathildeuh.sosstaff.ticket.Ticket;
 import fr.mathildeuh.sosstaff.ticket.TicketCreationCoordinator;
@@ -35,12 +36,13 @@ public final class PlayerCommands {
     private final TicketCreationCoordinator creationCoordinator;
     private final CreationMenu creationMenu;
     private final ChannelOrchestrator channelOrchestrator;
+    private final LiveChatListener liveChatListener;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
     public PlayerCommands(JavaPlugin plugin, TicketService ticketService, ConfigManager configManager,
                            LangManager langManager, LiveChatSessionManager sessionManager,
                            TicketCreationCoordinator creationCoordinator, CreationMenu creationMenu,
-                           ChannelOrchestrator channelOrchestrator) {
+                           ChannelOrchestrator channelOrchestrator, LiveChatListener liveChatListener) {
         this.plugin = plugin;
         this.ticketService = ticketService;
         this.configManager = configManager;
@@ -49,6 +51,7 @@ public final class PlayerCommands {
         this.creationCoordinator = creationCoordinator;
         this.creationMenu = creationMenu;
         this.channelOrchestrator = channelOrchestrator;
+        this.liveChatListener = liveChatListener;
     }
 
     public void register(PaperCommandManager<Source> commandManager) {
@@ -57,7 +60,9 @@ public final class PlayerCommands {
 
         var root = commandManager.commandBuilder(main, aliases).senderType(PlayerSource.class);
 
-        commandManager.command(root.handler(context -> sendStatus(context.sender().source())));
+        // Bare /ticket opens the creation panel - /ticket status is still there for players who
+        // want the raw status/priority readout instead.
+        commandManager.command(root.handler(context -> creationMenu.open(context.sender().source())));
 
         commandManager.command(root.literal("status")
                 .handler(context -> sendStatus(context.sender().source())));
@@ -92,12 +97,22 @@ public final class PlayerCommands {
                 .handler(context -> createTicketWithDefaultCategory(context.sender().source(), context.get("reason"))));
     }
 
+    /**
+     * The fast path: with no active ticket, this creates one; with an active ticket already
+     * open, the text is instead relayed as a reply into it - re-running "the same command" is
+     * the natural way for a player to keep talking to staff, not a way to spam new tickets.
+     */
     private void createTicketWithDefaultCategory(Player player, String reason) {
-        var categoryIds = configManager.categories().keySet();
-        if (categoryIds.isEmpty()) {
-            return;
-        }
-        createTicket(player, categoryIds.iterator().next(), reason);
+        ticketService.findActiveTicket(player.getUniqueId())
+                .thenAccept(active -> active.ifPresentOrElse(
+                        ticket -> runOnPlayerThread(player, () -> replyToActiveTicket(player, ticket, reason)),
+                        () -> createTicket(player, configManager.defaultCategory(), reason)))
+                .exceptionally(throwable -> logFailure(player, "reply to your ticket", throwable));
+    }
+
+    private void replyToActiveTicket(Player player, Ticket ticket, String content) {
+        liveChatListener.relayPlayerReply(ticket, player, content);
+        send(player, Message.TICKET_REPLY_SENT, Map.of("id", String.valueOf(ticket.id())));
     }
 
     private void createTicket(Player player, String category, String initialMessage) {

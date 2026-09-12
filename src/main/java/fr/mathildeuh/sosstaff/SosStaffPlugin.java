@@ -153,7 +153,8 @@ public final class SosStaffPlugin extends JavaPlugin {
                 .builder(PaperSimpleSenderMapper.simpleSenderMapper())
                 .executionCoordinator(ExecutionCoordinator.simpleCoordinator())
                 .buildOnEnable(this);
-        new PlayerCommands(this, ticketService, configManager, langManager, sessionManager, creationCoordinator, creationMenu, channelOrchestrator)
+        new PlayerCommands(this, ticketService, configManager, langManager, sessionManager, creationCoordinator, creationMenu,
+                channelOrchestrator, liveChatListener)
                 .register(commandManager);
         new AdminCommands(this, adminPanel, reloadService, gdprService, langManager).register(commandManager);
 

@@ -51,6 +51,11 @@ public final class ConfigManager {
             throw new ConfigValidationException("categories: at least one category must be configured");
         }
 
+        String defaultCategory = yaml.getString("default-category", categories.keySet().iterator().next());
+        if (!categories.containsKey(defaultCategory)) {
+            throw new ConfigValidationException("default-category '" + defaultCategory + "' is not one of the configured categories");
+        }
+
         DiscordConfig discord = DiscordConfig.fromSection(requireSection(yaml, "discord"));
 
         ConfigurationSection escalation = requireSection(yaml, "escalation");
@@ -88,7 +93,7 @@ public final class ConfigManager {
             throw new ConfigValidationException("language.default '" + languageDefault + "' must be included in language.shipped");
         }
 
-        return new Snapshot(commandMain, commandAliases, creationMode, Map.copyOf(categories), discord,
+        return new Snapshot(commandMain, commandAliases, creationMode, Map.copyOf(categories), defaultCategory, discord,
                 escalationEnabled, noClaimAfterMinutes, maxOpenTicketsPerPlayer, cooldownAfterCloseSeconds,
                 antiSpamBypassPermission, storageType, mysqlSettings, gdprRetentionDays, updateCheckerEnabled,
                 languageDefault, languageShipped, languagePerPlayer);
@@ -124,6 +129,16 @@ public final class ConfigManager {
 
     public Map<String, CategoryConfig> categories() {
         return snapshot.categories();
+    }
+
+    /**
+     * The category used by the fast {@code /ticket <reason>} path, which has no category step of
+     * its own. Explicit in config.yml rather than "whichever category happens to be first" - that
+     * would silently depend on YAML key order and file it under something like "Bug" for a player
+     * whose issue has nothing to do with a bug.
+     */
+    public String defaultCategory() {
+        return snapshot.defaultCategory();
     }
 
     public DiscordConfig discord() {
@@ -186,6 +201,7 @@ public final class ConfigManager {
             List<String> commandAliases,
             CreationMode creationMode,
             Map<String, CategoryConfig> categories,
+            String defaultCategory,
             DiscordConfig discord,
             boolean escalationEnabled,
             int noClaimAfterMinutes,

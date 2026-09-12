@@ -26,9 +26,10 @@ class ConfigManagerTest {
         configManager.load();
 
         assertEquals("ticket", configManager.commandMain());
-        assertEquals(2, configManager.categories().size());
+        assertEquals(3, configManager.categories().size());
         assertTrue(configManager.categories().containsKey("bug"));
         assertEquals(CreationMode.PRESET, configManager.categories().get("bug").mode());
+        assertEquals("other", configManager.defaultCategory());
         assertEquals(StorageType.SQLITE, configManager.storageType());
         assertEquals("en_US", configManager.languageDefault());
         assertTrue(configManager.languageShipped().contains("fr_FR"));
