@@ -46,3 +46,5 @@ gui:
 admin:
   attached-to-ticket: "Вы подключены к тикету #%id% - ваш чат будет транслироваться в Discord."
   no-permission: "У вас нет прав для этого."
+  gdpr:
+    erased: "Удалено %count% тикет(ов) для %player%."

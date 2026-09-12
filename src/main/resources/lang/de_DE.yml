@@ -46,3 +46,5 @@ gui:
 admin:
   attached-to-ticket: "Du bist jetzt mit Ticket #%id% verbunden - dein Chat wird zu Discord weitergeleitet."
   no-permission: "Du hast dafür keine Berechtigung."
+  gdpr:
+    erased: "%count% Ticket(s) für %player% gelöscht."

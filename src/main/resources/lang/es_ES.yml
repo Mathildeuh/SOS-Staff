@@ -46,3 +46,5 @@ gui:
 admin:
   attached-to-ticket: "Ahora estás conectado al ticket #%id% - tu chat se retransmitirá a Discord."
   no-permission: "No tienes permiso para hacer eso."
+  gdpr:
+    erased: "Se eliminaron %count% ticket(s) para %player%."

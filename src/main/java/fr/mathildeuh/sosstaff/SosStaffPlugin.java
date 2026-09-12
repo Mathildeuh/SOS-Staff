@@ -5,6 +5,7 @@ import fr.mathildeuh.sosstaff.command.AdminCommands;
 import fr.mathildeuh.sosstaff.command.PlayerCommands;
 import fr.mathildeuh.sosstaff.config.ConfigManager;
 import fr.mathildeuh.sosstaff.config.ConfigValidationException;
+import fr.mathildeuh.sosstaff.config.ReloadService;
 import fr.mathildeuh.sosstaff.config.StorageType;
 import fr.mathildeuh.sosstaff.discord.ActionButtonHandler;
 import fr.mathildeuh.sosstaff.discord.ButtonHandler;
@@ -12,6 +13,7 @@ import fr.mathildeuh.sosstaff.discord.ChannelOrchestrator;
 import fr.mathildeuh.sosstaff.discord.DiscordGateway;
 import fr.mathildeuh.sosstaff.discord.DiscordInteractionListener;
 import fr.mathildeuh.sosstaff.discord.DiscordMessageListener;
+import fr.mathildeuh.sosstaff.discord.EscalationScheduler;
 import fr.mathildeuh.sosstaff.discord.FreezeListener;
 import fr.mathildeuh.sosstaff.discord.FrozenPlayers;
 import fr.mathildeuh.sosstaff.discord.InternalActionRegistry;
@@ -29,6 +31,8 @@ import fr.mathildeuh.sosstaff.storage.sqlite.SqliteDataSourceFactory;
 import fr.mathildeuh.sosstaff.storage.sqlite.SqliteMigrations;
 import fr.mathildeuh.sosstaff.storage.sqlite.SqliteTicketMessageRepository;
 import fr.mathildeuh.sosstaff.storage.sqlite.SqliteTicketRepository;
+import fr.mathildeuh.sosstaff.ticket.GdprService;
+import fr.mathildeuh.sosstaff.ticket.RetentionScheduler;
 import fr.mathildeuh.sosstaff.ticket.TicketCreationCoordinator;
 import fr.mathildeuh.sosstaff.ticket.TicketMessageRepository;
 import fr.mathildeuh.sosstaff.ticket.TicketRepository;
@@ -96,14 +100,26 @@ public final class SosStaffPlugin extends JavaPlugin {
 
         FrozenPlayers frozenPlayers = new FrozenPlayers();
         InternalActionRegistry internalActionRegistry = new InternalActionRegistry(frozenPlayers);
-        ButtonHandler buttonHandler = new ButtonHandler(this, ticketService, configManager, ticketMessageRepository, sessionManager);
-        ActionButtonHandler actionButtonHandler = new ActionButtonHandler(this, configManager, ticketService, internalActionRegistry);
 
         discordGateway = new DiscordGateway(getLogger());
+        EscalationScheduler escalationScheduler = new EscalationScheduler(this, ticketService, configManager, discordGateway, getLogger());
+        ButtonHandler buttonHandler = new ButtonHandler(
+                this, ticketService, configManager, ticketMessageRepository, sessionManager, escalationScheduler);
+        ActionButtonHandler actionButtonHandler = new ActionButtonHandler(this, configManager, ticketService, internalActionRegistry);
+
         DiscordMessageListener discordMessageListener =
                 new DiscordMessageListener(this, sessionManager, ticketMessageRepository, langManager);
         DiscordInteractionListener discordInteractionListener = new DiscordInteractionListener(buttonHandler, actionButtonHandler);
         discordGateway.start(configManager.discord().token(), discordMessageListener, discordInteractionListener);
+        escalationScheduler.start();
+
+        GdprService gdprService = new GdprService(ticketRepository, ticketMessageRepository, configManager);
+        new RetentionScheduler(this, gdprService, getLogger()).start();
+
+        ReloadService reloadService = new ReloadService(configManager, langManager, newToken -> {
+            discordGateway.stop();
+            discordGateway.start(newToken, discordMessageListener, discordInteractionListener);
+        });
 
         ChannelOrchestrator channelOrchestrator = new ChannelOrchestrator(discordGateway, configManager, getLogger());
         WebhookRelay webhookRelay = new WebhookRelay(discordGateway, getLogger());
@@ -127,7 +143,7 @@ public final class SosStaffPlugin extends JavaPlugin {
                 .buildOnEnable(this);
         new PlayerCommands(this, ticketService, configManager, langManager, sessionManager, creationCoordinator, creationMenu)
                 .register(commandManager);
-        new AdminCommands(adminPanel).register(commandManager);
+        new AdminCommands(this, adminPanel, reloadService, gdprService, langManager).register(commandManager);
 
         getServer().getOnlinePlayers().forEach(liveChatListener::reopenSessionIfNeeded);
 

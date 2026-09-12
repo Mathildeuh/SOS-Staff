@@ -28,7 +28,8 @@ public enum Message {
     GUI_ADMIN_PANEL_TICKET_LORE("gui.admin-panel.ticket-lore"),
     GUI_ADMIN_PANEL_FILTER_ALL("gui.admin-panel.filter-all"),
     ADMIN_ATTACHED_TO_TICKET("admin.attached-to-ticket"),
-    ADMIN_NO_PERMISSION("admin.no-permission");
+    ADMIN_NO_PERMISSION("admin.no-permission"),
+    ADMIN_GDPR_ERASED("admin.gdpr.erased");
 
     private final String key;
 
