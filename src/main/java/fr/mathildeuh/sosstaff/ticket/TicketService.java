@@ -1,5 +1,7 @@
 package fr.mathildeuh.sosstaff.ticket;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import fr.mathildeuh.sosstaff.config.ConfigManager;
 
 import java.time.Clock;
@@ -14,6 +16,18 @@ public final class TicketService {
     private final TicketRepository repository;
     private final ConfigManager configManager;
     private final Clock clock;
+
+    /**
+     * A write-through mirror of "each player's active ticket" and read-through mirror of "each
+     * player's ticket history," kept warm by every method below. It exists so
+     * {@link #peekActiveTicket(UUID)}/{@link #peekHistory(UUID)} can answer synchronously and
+     * without touching the database - SosStaffAPI's public contract returns those two calls
+     * directly rather than as a CompletableFuture, so blocking on the database is not an option.
+     */
+    private final Cache<UUID, Ticket> activeCache = Caffeine.newBuilder()
+            .expireAfterWrite(Duration.ofHours(1)).maximumSize(10_000).build();
+    private final Cache<UUID, List<Ticket>> historyCache = Caffeine.newBuilder()
+            .expireAfterWrite(Duration.ofMinutes(10)).maximumSize(10_000).build();
 
     public TicketService(TicketRepository repository, ConfigManager configManager) {
         this(repository, configManager, Clock.systemUTC());
@@ -36,19 +50,23 @@ public final class TicketService {
     }
 
     public CompletableFuture<Ticket> claim(long ticketId, UUID staffUuid) {
-        return repository.claim(ticketId, staffUuid).thenCompose(ignored -> requireById(ticketId));
+        return repository.claim(ticketId, staffUuid).thenCompose(ignored -> requireById(ticketId))
+                .thenApply(this::refreshCache);
     }
 
     public CompletableFuture<Ticket> close(long ticketId, String reason) {
-        return repository.close(ticketId, reason).thenCompose(ignored -> requireById(ticketId));
+        return repository.close(ticketId, reason).thenCompose(ignored -> requireById(ticketId))
+                .thenApply(this::refreshCache);
     }
 
     public CompletableFuture<Ticket> updatePriority(long ticketId, TicketPriority priority) {
-        return repository.updatePriority(ticketId, priority).thenCompose(ignored -> requireById(ticketId));
+        return repository.updatePriority(ticketId, priority).thenCompose(ignored -> requireById(ticketId))
+                .thenApply(this::refreshCache);
     }
 
     public CompletableFuture<Ticket> reopen(long ticketId) {
-        return repository.updateStatus(ticketId, TicketStatus.OPEN).thenCompose(ignored -> requireById(ticketId));
+        return repository.updateStatus(ticketId, TicketStatus.OPEN).thenCompose(ignored -> requireById(ticketId))
+                .thenApply(this::refreshCache);
     }
 
     public CompletableFuture<Void> setDiscordChannelId(long ticketId, String discordChannelId) {
@@ -56,7 +74,10 @@ public final class TicketService {
     }
 
     public CompletableFuture<Optional<Ticket>> findActiveTicket(UUID playerUuid) {
-        return repository.findActiveByPlayer(playerUuid);
+        return repository.findActiveByPlayer(playerUuid).thenApply(ticketOpt -> {
+            ticketOpt.ifPresentOrElse(ticket -> activeCache.put(playerUuid, ticket), () -> activeCache.invalidate(playerUuid));
+            return ticketOpt;
+        });
     }
 
     public CompletableFuture<Optional<Ticket>> findById(long ticketId) {
@@ -64,7 +85,30 @@ public final class TicketService {
     }
 
     public CompletableFuture<List<Ticket>> findHistory(UUID playerUuid) {
-        return repository.findHistoryByPlayer(playerUuid);
+        return repository.findHistoryByPlayer(playerUuid).thenApply(history -> {
+            historyCache.put(playerUuid, history);
+            return history;
+        });
+    }
+
+    /**
+     * A synchronous, cache-only read of the player's active ticket, never touching the
+     * database. Reflects whatever the last {@link #findActiveTicket(UUID)} call or mutation for
+     * that player observed - it may be empty for a player who has an active ticket in the
+     * database but hasn't been looked up yet this session.
+     */
+    public Optional<Ticket> peekActiveTicket(UUID playerUuid) {
+        return Optional.ofNullable(activeCache.getIfPresent(playerUuid));
+    }
+
+    /**
+     * A synchronous, cache-only read of the player's ticket history, never touching the
+     * database. Empty until {@link #findHistory(UUID)} has resolved at least once for that
+     * player this session.
+     */
+    public List<Ticket> peekHistory(UUID playerUuid) {
+        List<Ticket> cached = historyCache.getIfPresent(playerUuid);
+        return cached != null ? cached : List.of();
     }
 
     public CompletableFuture<List<Ticket>> findPage(Optional<TicketStatus> statusFilter, int page, int pageSize) {
@@ -87,7 +131,20 @@ public final class TicketService {
     }
 
     private CompletableFuture<TicketCreationResult> create(UUID playerUuid, String category, TicketPriority priority) {
-        return repository.create(playerUuid, category, priority).thenApply(TicketCreationResult.Created::new);
+        return repository.create(playerUuid, category, priority).thenApply(ticket -> {
+            refreshCache(ticket);
+            return new TicketCreationResult.Created(ticket);
+        });
+    }
+
+    private Ticket refreshCache(Ticket ticket) {
+        if (ticket.status() == TicketStatus.CLOSED || ticket.status() == TicketStatus.ARCHIVED) {
+            activeCache.invalidate(ticket.playerUuid());
+        } else {
+            activeCache.put(ticket.playerUuid(), ticket);
+        }
+        historyCache.invalidate(ticket.playerUuid());
+        return ticket;
     }
 
     private CompletableFuture<Optional<TicketCreationResult>> checkAntiSpam(UUID playerUuid) {

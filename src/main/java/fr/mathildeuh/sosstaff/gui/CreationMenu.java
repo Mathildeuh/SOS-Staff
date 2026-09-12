@@ -1,14 +1,17 @@
 package fr.mathildeuh.sosstaff.gui;
 
+import fr.mathildeuh.sosstaff.api.event.TicketCreateEvent;
 import fr.mathildeuh.sosstaff.config.CategoryConfig;
 import fr.mathildeuh.sosstaff.config.ConfigManager;
 import fr.mathildeuh.sosstaff.config.CreationMode;
 import fr.mathildeuh.sosstaff.config.CreationUi;
 import fr.mathildeuh.sosstaff.lang.LangManager;
 import fr.mathildeuh.sosstaff.lang.Message;
+import fr.mathildeuh.sosstaff.ticket.Ticket;
 import fr.mathildeuh.sosstaff.ticket.TicketCreationCoordinator;
 import fr.mathildeuh.sosstaff.ticket.TicketCreationResult;
 import fr.mathildeuh.sosstaff.ticket.TicketPriority;
+import fr.mathildeuh.sosstaff.ticket.TicketStatus;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
@@ -19,6 +22,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -130,6 +134,11 @@ public final class CreationMenu {
     }
 
     private void createTicket(Player player, String categoryId, String initialMessage) {
+        if (!announceCreation(player, categoryId)) {
+            player.sendMessage(miniMessage.deserialize(langManager.get(Message.TICKET_CREATE_REJECTED_BY_PLUGIN, Map.of())));
+            return;
+        }
+
         boolean bypass = player.hasPermission(configManager.antiSpamBypassPermission());
         creationCoordinator.create(player.getUniqueId(), player.getName(), categoryId, TicketPriority.MEDIUM, bypass, initialMessage)
                 .thenAccept(result -> Bukkit.getScheduler().runTask(plugin, () -> notify(player, result)))
@@ -137,6 +146,19 @@ public final class CreationMenu {
                     plugin.getLogger().severe("Failed to create a ticket for " + player.getUniqueId() + " from the GUI: " + throwable);
                     return null;
                 });
+    }
+
+    /**
+     * Fires {@link TicketCreateEvent} with a transient preview of the ticket about to be
+     * created, so another plugin can veto the request before it ever reaches the database.
+     * Returns {@code false} if a listener cancelled it.
+     */
+    private boolean announceCreation(Player player, String categoryId) {
+        Ticket preview = new Ticket(0, player.getUniqueId(), categoryId, TicketStatus.OPEN,
+                TicketPriority.MEDIUM, null, null, Instant.now(), null, null, null);
+        TicketCreateEvent event = new TicketCreateEvent(preview);
+        Bukkit.getPluginManager().callEvent(event);
+        return !event.isCancelled();
     }
 
     private void notify(Player player, TicketCreationResult result) {

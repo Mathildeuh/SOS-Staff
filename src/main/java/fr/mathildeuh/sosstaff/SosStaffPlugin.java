@@ -1,6 +1,8 @@
 package fr.mathildeuh.sosstaff;
 
 import com.zaxxer.hikari.HikariDataSource;
+import fr.mathildeuh.sosstaff.api.SosStaffAPI;
+import fr.mathildeuh.sosstaff.api.SosStaffAPIImpl;
 import fr.mathildeuh.sosstaff.command.AdminCommands;
 import fr.mathildeuh.sosstaff.command.PlayerCommands;
 import fr.mathildeuh.sosstaff.config.ConfigManager;
@@ -37,6 +39,7 @@ import fr.mathildeuh.sosstaff.ticket.TicketCreationCoordinator;
 import fr.mathildeuh.sosstaff.ticket.TicketMessageRepository;
 import fr.mathildeuh.sosstaff.ticket.TicketRepository;
 import fr.mathildeuh.sosstaff.ticket.TicketService;
+import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.incendo.cloud.execution.ExecutionCoordinator;
 import org.incendo.cloud.paper.PaperCommandManager;
@@ -55,6 +58,7 @@ public final class SosStaffPlugin extends JavaPlugin {
     private ExecutorService storageExecutor;
     private TicketService ticketService;
     private DiscordGateway discordGateway;
+    private SosStaffAPI sosStaffAPI;
 
     @Override
     public void onEnable() {
@@ -108,7 +112,7 @@ public final class SosStaffPlugin extends JavaPlugin {
         ActionButtonHandler actionButtonHandler = new ActionButtonHandler(this, configManager, ticketService, internalActionRegistry);
 
         DiscordMessageListener discordMessageListener =
-                new DiscordMessageListener(this, sessionManager, ticketMessageRepository, langManager);
+                new DiscordMessageListener(this, sessionManager, ticketMessageRepository, ticketService, langManager);
         DiscordInteractionListener discordInteractionListener = new DiscordInteractionListener(buttonHandler, actionButtonHandler);
         discordGateway.start(configManager.discord().token(), discordMessageListener, discordInteractionListener);
         escalationScheduler.start();
@@ -126,8 +130,11 @@ public final class SosStaffPlugin extends JavaPlugin {
         TicketCreationCoordinator creationCoordinator =
                 new TicketCreationCoordinator(ticketService, channelOrchestrator, sessionManager, ticketMessageRepository, webhookRelay);
 
+        sosStaffAPI = new SosStaffAPIImpl(ticketService, creationCoordinator);
+        getServer().getServicesManager().register(SosStaffAPI.class, sosStaffAPI, this, ServicePriority.Normal);
+
         LiveChatListener liveChatListener = new LiveChatListener(
-                sessionManager, webhookRelay, ticketMessageRepository, ticketService, pendingChatPrompts, getLogger());
+                this, sessionManager, webhookRelay, ticketMessageRepository, ticketService, pendingChatPrompts, getLogger());
         getServer().getPluginManager().registerEvents(liveChatListener, this);
         getServer().getPluginManager().registerEvents(new FreezeListener(frozenPlayers), this);
 
@@ -152,6 +159,7 @@ public final class SosStaffPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        getServer().getServicesManager().unregisterAll(this);
         if (discordGateway != null) {
             discordGateway.stop();
         }
@@ -174,5 +182,9 @@ public final class SosStaffPlugin extends JavaPlugin {
 
     public TicketService ticketService() {
         return ticketService;
+    }
+
+    public SosStaffAPI sosStaffAPI() {
+        return sosStaffAPI;
     }
 }

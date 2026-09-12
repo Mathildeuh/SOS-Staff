@@ -19,6 +19,7 @@ dependencies {
     implementation("net.dv8tion:JDA:6.6.0") {
         exclude(module = "opus-java")
     }
+    implementation("com.github.ben-manes.caffeine:caffeine:3.2.4")
 
     testImplementation("io.papermc.paper:paper-api:26.2.build.+")
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
@@ -58,6 +59,7 @@ tasks {
         relocate("com.neovisionaries.ws.client", "$libs.nvwebsocket")
         relocate("gnu.trove", "$libs.trove")
         relocate("org.apache.commons.collections4", "$libs.commonscollections4")
+        relocate("com.github.benmanes.caffeine", "$libs.caffeine")
         // Deliberately NOT relocated: org.slf4j (a shared logging facade, not a private
         // implementation detail - relocating it is the opposite of what shading guides for
         // it recommend); the Kotlin stdlib (compiler-generated metadata references class

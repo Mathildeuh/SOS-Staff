@@ -1,5 +1,7 @@
 package fr.mathildeuh.sosstaff.command;
 
+import fr.mathildeuh.sosstaff.api.event.TicketCloseEvent;
+import fr.mathildeuh.sosstaff.api.event.TicketCreateEvent;
 import fr.mathildeuh.sosstaff.config.ConfigManager;
 import fr.mathildeuh.sosstaff.gui.CreationMenu;
 import fr.mathildeuh.sosstaff.lang.LangManager;
@@ -10,6 +12,7 @@ import fr.mathildeuh.sosstaff.ticket.TicketCreationCoordinator;
 import fr.mathildeuh.sosstaff.ticket.TicketCreationResult;
 import fr.mathildeuh.sosstaff.ticket.TicketPriority;
 import fr.mathildeuh.sosstaff.ticket.TicketService;
+import fr.mathildeuh.sosstaff.ticket.TicketStatus;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -18,8 +21,8 @@ import org.incendo.cloud.paper.util.sender.PlayerSource;
 import org.incendo.cloud.paper.util.sender.Source;
 import org.incendo.cloud.parser.standard.StringParser;
 
+import java.time.Instant;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 public final class PlayerCommands {
 
@@ -87,10 +90,28 @@ public final class PlayerCommands {
             return;
         }
 
+        if (!announceCreation(player, category)) {
+            send(player, Message.TICKET_CREATE_REJECTED_BY_PLUGIN, Map.of());
+            return;
+        }
+
         boolean bypass = player.hasPermission(configManager.antiSpamBypassPermission());
         creationCoordinator.create(player.getUniqueId(), player.getName(), category, TicketPriority.MEDIUM, bypass, null)
                 .thenAccept(result -> runOnMainThread(() -> handleCreationResult(player, result)))
                 .exceptionally(throwable -> logFailure(player, "create a ticket", throwable));
+    }
+
+    /**
+     * Fires {@link TicketCreateEvent} with a transient preview of the ticket about to be
+     * created, so another plugin can veto the request before it ever reaches the database.
+     * Returns {@code false} if a listener cancelled it.
+     */
+    private boolean announceCreation(Player player, String category) {
+        Ticket preview = new Ticket(0, player.getUniqueId(), category, TicketStatus.OPEN,
+                TicketPriority.MEDIUM, null, null, Instant.now(), null, null, null);
+        TicketCreateEvent event = new TicketCreateEvent(preview);
+        plugin.getServer().getPluginManager().callEvent(event);
+        return !event.isCancelled();
     }
 
     private void handleCreationResult(Player player, TicketCreationResult result) {
@@ -108,18 +129,28 @@ public final class PlayerCommands {
 
     private void closeOwnActiveTicket(Player player, String reason, Message noneActiveMessage, Message successMessage) {
         ticketService.findActiveTicket(player.getUniqueId())
-                .thenCompose(active -> {
+                .thenAccept(active -> {
                     if (active.isEmpty()) {
                         runOnMainThread(() -> send(player, noneActiveMessage, Map.of()));
-                        return CompletableFuture.completedFuture(null);
+                        return;
                     }
                     String effectiveReason = reason.isBlank() ? "Closed by the player" : reason;
-                    return ticketService.close(active.get().id(), effectiveReason).thenAccept(closed -> {
-                        sessionManager.closeByTicketId(closed.id());
-                        runOnMainThread(() -> send(player, successMessage, Map.of("id", String.valueOf(closed.id()))));
-                    });
+                    player.getScheduler().run(plugin,
+                            scheduledTask -> closeIfNotCancelled(player, active.get(), effectiveReason, successMessage), null);
                 })
                 .exceptionally(throwable -> logFailure(player, "close your ticket", throwable));
+    }
+
+    private void closeIfNotCancelled(Player player, Ticket ticket, String reason, Message successMessage) {
+        TicketCloseEvent event = new TicketCloseEvent(ticket, reason);
+        plugin.getServer().getPluginManager().callEvent(event);
+        if (event.isCancelled()) {
+            return;
+        }
+        ticketService.close(ticket.id(), reason).thenAccept(closed -> {
+            sessionManager.closeByTicketId(closed.id());
+            runOnMainThread(() -> send(player, successMessage, Map.of("id", String.valueOf(closed.id()))));
+        }).exceptionally(throwable -> logFailure(player, "close your ticket", throwable));
     }
 
     private void sendStatus(Player player) {

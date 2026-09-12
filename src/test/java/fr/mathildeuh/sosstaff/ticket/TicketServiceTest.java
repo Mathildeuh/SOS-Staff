@@ -133,6 +133,45 @@ class TicketServiceTest {
     }
 
     @Test
+    void peekActiveTicketReflectsCreationWithoutTouchingTheDatabase() throws Exception {
+        TicketService service = new TicketService(repository, configManager);
+        UUID playerUuid = UUID.randomUUID();
+
+        assertTrue(service.peekActiveTicket(playerUuid).isEmpty());
+
+        Ticket created = ((TicketCreationResult.Created) get(
+                service.createTicket(playerUuid, "bug", TicketPriority.MEDIUM, false))).ticket();
+
+        assertEquals(created, service.peekActiveTicket(playerUuid).orElseThrow());
+    }
+
+    @Test
+    void peekActiveTicketIsClearedOnceTheTicketIsClosed() throws Exception {
+        TicketService service = new TicketService(repository, configManager);
+        UUID playerUuid = UUID.randomUUID();
+        Ticket created = ((TicketCreationResult.Created) get(
+                service.createTicket(playerUuid, "bug", TicketPriority.MEDIUM, false))).ticket();
+
+        get(service.close(created.id(), "resolved"));
+
+        assertTrue(service.peekActiveTicket(playerUuid).isEmpty());
+    }
+
+    @Test
+    void peekHistoryIsPopulatedByFindHistoryAndEmptyBeforeIt() throws Exception {
+        TicketService service = new TicketService(repository, configManager);
+        UUID playerUuid = UUID.randomUUID();
+        get(service.createTicket(playerUuid, "bug", TicketPriority.MEDIUM, false));
+
+        assertTrue(service.peekHistory(playerUuid).isEmpty());
+
+        List<Ticket> history = get(service.findHistory(playerUuid));
+
+        assertEquals(history, service.peekHistory(playerUuid));
+        assertEquals(1, service.peekHistory(playerUuid).size());
+    }
+
+    @Test
     void findTicketsNeedingEscalationReturnsOnlyOldUnclaimedOpenTickets() throws Exception {
         Ticket oldEnough = get(repository.create(UUID.randomUUID(), "bug", TicketPriority.MEDIUM));
         Ticket claimed = get(repository.create(UUID.randomUUID(), "bug", TicketPriority.MEDIUM));

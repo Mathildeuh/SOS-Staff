@@ -1,10 +1,13 @@
 package fr.mathildeuh.sosstaff.discord;
 
+import fr.mathildeuh.sosstaff.api.event.TicketMessageEvent;
 import fr.mathildeuh.sosstaff.lang.LangManager;
 import fr.mathildeuh.sosstaff.lang.Message;
 import fr.mathildeuh.sosstaff.session.LiveChatSessionManager;
 import fr.mathildeuh.sosstaff.session.TicketSession;
+import fr.mathildeuh.sosstaff.ticket.Ticket;
 import fr.mathildeuh.sosstaff.ticket.TicketMessageRepository;
+import fr.mathildeuh.sosstaff.ticket.TicketService;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -24,14 +27,17 @@ public final class DiscordMessageListener extends ListenerAdapter {
     private final JavaPlugin plugin;
     private final LiveChatSessionManager sessionManager;
     private final TicketMessageRepository messageRepository;
+    private final TicketService ticketService;
     private final LangManager langManager;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
     public DiscordMessageListener(JavaPlugin plugin, LiveChatSessionManager sessionManager,
-                                   TicketMessageRepository messageRepository, LangManager langManager) {
+                                   TicketMessageRepository messageRepository, TicketService ticketService,
+                                   LangManager langManager) {
         this.plugin = plugin;
         this.sessionManager = sessionManager;
         this.messageRepository = messageRepository;
+        this.ticketService = ticketService;
         this.langManager = langManager;
     }
 
@@ -45,18 +51,28 @@ public final class DiscordMessageListener extends ListenerAdapter {
             String authorName = event.getAuthor().getName();
             String content = event.getMessage().getContentDisplay();
 
-            messageRepository.append(session.ticketId(), null, authorName, true, content);
-            relayToPlayer(session, authorName, content);
+            ticketService.findById(session.ticketId()).thenAccept(ticketOpt -> ticketOpt.ifPresent(ticket ->
+                    plugin.getServer().getGlobalRegionScheduler().run(plugin,
+                            scheduledTask -> fireAndRelay(ticket, session, authorName, content))));
         });
     }
 
+    private void fireAndRelay(Ticket ticket, TicketSession session, String authorName, String content) {
+        TicketMessageEvent event = new TicketMessageEvent(ticket, null, authorName, content, true);
+        plugin.getServer().getPluginManager().callEvent(event);
+        if (event.isCancelled()) {
+            return;
+        }
+        messageRepository.append(ticket.id(), null, authorName, true, content);
+        relayToPlayer(session, authorName, content);
+    }
+
     private void relayToPlayer(TicketSession session, String authorName, String content) {
-        plugin.getServer().getScheduler().runTask(plugin, () -> {
-            Player player = plugin.getServer().getPlayer(session.playerUuid());
-            if (player != null) {
-                player.sendMessage(miniMessage.deserialize(langManager.get(Message.CHAT_STAFF_REPLY,
-                        Map.of("author", authorName, "message", content))));
-            }
-        });
+        Player player = plugin.getServer().getPlayer(session.playerUuid());
+        if (player == null) {
+            return;
+        }
+        player.getScheduler().run(plugin, scheduledTask -> player.sendMessage(miniMessage.deserialize(
+                langManager.get(Message.CHAT_STAFF_REPLY, Map.of("author", authorName, "message", content)))), null);
     }
 }

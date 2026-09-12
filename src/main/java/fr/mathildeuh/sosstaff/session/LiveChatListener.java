@@ -1,7 +1,9 @@
 package fr.mathildeuh.sosstaff.session;
 
+import fr.mathildeuh.sosstaff.api.event.TicketMessageEvent;
 import fr.mathildeuh.sosstaff.discord.WebhookRelay;
 import fr.mathildeuh.sosstaff.gui.PendingChatPrompts;
+import fr.mathildeuh.sosstaff.ticket.Ticket;
 import fr.mathildeuh.sosstaff.ticket.TicketMessageRepository;
 import fr.mathildeuh.sosstaff.ticket.TicketService;
 import io.papermc.paper.event.player.AsyncChatEvent;
@@ -12,12 +14,14 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.UUID;
 import java.util.logging.Logger;
 
 public final class LiveChatListener implements Listener {
 
+    private final JavaPlugin plugin;
     private final LiveChatSessionManager sessionManager;
     private final WebhookRelay webhookRelay;
     private final TicketMessageRepository messageRepository;
@@ -25,9 +29,10 @@ public final class LiveChatListener implements Listener {
     private final PendingChatPrompts pendingChatPrompts;
     private final Logger logger;
 
-    public LiveChatListener(LiveChatSessionManager sessionManager, WebhookRelay webhookRelay,
+    public LiveChatListener(JavaPlugin plugin, LiveChatSessionManager sessionManager, WebhookRelay webhookRelay,
                              TicketMessageRepository messageRepository, TicketService ticketService,
                              PendingChatPrompts pendingChatPrompts, Logger logger) {
+        this.plugin = plugin;
         this.sessionManager = sessionManager;
         this.webhookRelay = webhookRelay;
         this.messageRepository = messageRepository;
@@ -50,18 +55,31 @@ public final class LiveChatListener implements Listener {
     private void relayIfInSession(AsyncChatEvent event, Player player, String content) {
         sessionManager.findByPlayer(player.getUniqueId()).ifPresentOrElse(session -> {
             event.setCancelled(true);
-            relay(session.ticketId(), session.discordChannelId(), player.getUniqueId(), player.getName(), content, false);
+            relay(session.ticketId(), session.discordChannelId(), player, content, false);
         }, () -> sessionManager.findStaffAttachment(player.getUniqueId()).ifPresent(attachment -> {
             event.setCancelled(true);
-            relay(attachment.ticketId(), attachment.discordChannelId(), player.getUniqueId(), player.getName(), content, true);
+            relay(attachment.ticketId(), attachment.discordChannelId(), player, content, true);
         }));
     }
 
-    private void relay(long ticketId, String discordChannelId, UUID authorUuid, String authorName, String content, boolean isStaff) {
-        messageRepository.append(ticketId, authorUuid, authorName, isStaff, content);
+    private void relay(long ticketId, String discordChannelId, Player player, String content, boolean isStaff) {
+        ticketService.findById(ticketId).thenAccept(ticketOpt -> ticketOpt.ifPresent(ticket ->
+                player.getScheduler().run(plugin,
+                        scheduledTask -> fireAndRelay(ticket, discordChannelId, player, content, isStaff), null)));
+    }
+
+    private void fireAndRelay(Ticket ticket, String discordChannelId, Player player, String content, boolean isStaff) {
+        UUID authorUuid = player.getUniqueId();
+        String authorName = player.getName();
+        TicketMessageEvent event = new TicketMessageEvent(ticket, authorUuid, authorName, content, isStaff);
+        plugin.getServer().getPluginManager().callEvent(event);
+        if (event.isCancelled()) {
+            return;
+        }
+        messageRepository.append(ticket.id(), authorUuid, authorName, isStaff, content);
         webhookRelay.relayPlayerMessage(discordChannelId, authorUuid, authorName, content)
                 .exceptionally(throwable -> {
-                    logger.warning("Failed to relay chat for ticket #" + ticketId + ": " + throwable);
+                    logger.warning("Failed to relay chat for ticket #" + ticket.id() + ": " + throwable);
                     return null;
                 });
     }

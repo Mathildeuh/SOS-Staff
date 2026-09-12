@@ -1,5 +1,7 @@
 package fr.mathildeuh.sosstaff.discord;
 
+import fr.mathildeuh.sosstaff.api.event.TicketClaimEvent;
+import fr.mathildeuh.sosstaff.api.event.TicketCloseEvent;
 import fr.mathildeuh.sosstaff.config.CategoryConfig;
 import fr.mathildeuh.sosstaff.config.ConfigManager;
 import fr.mathildeuh.sosstaff.session.LiveChatSessionManager;
@@ -66,16 +68,36 @@ public final class ButtonHandler {
             return;
         }
         event.deferEdit().queue();
-        ticketService.claim(ticketId, staff.getUniqueId()).thenAccept(ticket -> updateEmbed(event, ticket));
+        ticketService.findById(ticketId).thenAccept(ticketOpt -> ticketOpt.ifPresent(ticket ->
+                staff.getScheduler().run(plugin, scheduledTask -> claimIfNotCancelled(event, ticket, staff), null)));
+    }
+
+    private void claimIfNotCancelled(ButtonInteractionEvent event, Ticket ticket, Player staff) {
+        TicketClaimEvent claimEvent = new TicketClaimEvent(ticket, staff.getUniqueId());
+        plugin.getServer().getPluginManager().callEvent(claimEvent);
+        if (claimEvent.isCancelled()) {
+            return;
+        }
+        ticketService.claim(ticket.id(), staff.getUniqueId()).thenAccept(claimed -> updateEmbed(event, claimed));
     }
 
     private void handleClose(ButtonInteractionEvent event, long ticketId) {
         event.deferEdit().queue();
-        ticketService.close(ticketId, "Closed from Discord by " + event.getUser().getName())
-                .thenAccept(ticket -> {
-                    sessionManager.closeByTicketId(ticketId);
-                    updateEmbed(event, ticket);
-                });
+        String reason = "Closed from Discord by " + event.getUser().getName();
+        ticketService.findById(ticketId).thenAccept(ticketOpt -> ticketOpt.ifPresent(ticket ->
+                plugin.getServer().getGlobalRegionScheduler().run(plugin, scheduledTask -> closeIfNotCancelled(event, ticket, reason))));
+    }
+
+    private void closeIfNotCancelled(ButtonInteractionEvent event, Ticket ticket, String reason) {
+        TicketCloseEvent closeEvent = new TicketCloseEvent(ticket, reason);
+        plugin.getServer().getPluginManager().callEvent(closeEvent);
+        if (closeEvent.isCancelled()) {
+            return;
+        }
+        ticketService.close(ticket.id(), reason).thenAccept(closed -> {
+            sessionManager.closeByTicketId(closed.id());
+            updateEmbed(event, closed);
+        });
     }
 
     private void handleReopen(ButtonInteractionEvent event, long ticketId) {

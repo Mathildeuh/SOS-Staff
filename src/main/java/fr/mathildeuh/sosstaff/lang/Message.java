@@ -10,6 +10,7 @@ public enum Message {
     TICKET_CREATE_UNKNOWN_CATEGORY("ticket.create.unknown-category"),
     TICKET_CREATE_REJECTED_TOO_MANY_OPEN("ticket.create.rejected.too-many-open"),
     TICKET_CREATE_REJECTED_COOLDOWN("ticket.create.rejected.cooldown"),
+    TICKET_CREATE_REJECTED_BY_PLUGIN("ticket.create.rejected.by-plugin"),
     TICKET_STATUS_NONE("ticket.status.none"),
     TICKET_STATUS_ACTIVE("ticket.status.active"),
     TICKET_LIST_EMPTY("ticket.list.empty"),

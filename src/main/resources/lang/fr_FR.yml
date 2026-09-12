@@ -18,6 +18,7 @@ ticket:
     rejected:
       too-many-open: "Vous avez déjà un ticket ouvert: #%id%."
       cooldown: "Merci d'attendre %seconds%s avant d'ouvrir un nouveau ticket."
+      by-plugin: "La création du ticket a été bloquée par un plugin du serveur."
   status:
     none: "Vous n'avez pas de ticket actif."
     active: "Ticket #%id% - statut: %status%, priorité: %priority%."
