@@ -25,15 +25,15 @@ public final class EmbedFactory {
     public static ActionRow managementRow(long ticketId) {
         String suffix = ":" + ticketId;
         return ActionRow.of(
-                Button.success("sos-manage:claim" + suffix, "Claim"),
-                Button.primary("sos-manage:priority" + suffix, "Priority"),
-                Button.secondary("sos-manage:transcript" + suffix, "Transcript"),
-                Button.secondary("sos-manage:ping" + suffix, "Ping"),
-                Button.danger("sos-manage:close" + suffix, "Close"));
+                Button.success("sos-manage:claim" + suffix, "✋ Claim"),
+                Button.primary("sos-manage:priority" + suffix, "🔥 Priority"),
+                Button.secondary("sos-manage:transcript" + suffix, "📜 Transcript"),
+                Button.secondary("sos-manage:ping" + suffix, "📣 Ping"),
+                Button.danger("sos-manage:close" + suffix, "🔒 Close"));
     }
 
     public static ActionRow reopenRow(long ticketId) {
-        return ActionRow.of(Button.secondary("sos-manage:reopen:" + ticketId, "Reopen"));
+        return ActionRow.of(Button.secondary("sos-manage:reopen:" + ticketId, "🔓 Reopen"));
     }
 
     public static List<ActionRow> actionButtonRows(Map<String, DiscordConfig.ActionButton> buttons, long ticketId, boolean targetOnline) {
@@ -62,14 +62,14 @@ public final class EmbedFactory {
      */
     public static MessageEmbed ticketEmbed(Ticket ticket, CategoryConfig category, String playerName) {
         EmbedBuilder builder = new EmbedBuilder();
-        builder.setTitle("Ticket #" + ticket.id() + " - " + category.displayName());
+        builder.setTitle("🎫 Ticket #" + ticket.id() + " - " + category.displayName());
         builder.setColor(parseColor(category.colorHex()));
         builder.setThumbnail(SkinRenderer.avatarUrl(ticket.playerUuid()));
-        builder.addField("Player", playerName, true);
-        builder.addField("Status", ticket.status().name(), true);
-        builder.addField("Priority", ticket.priority().name(), true);
+        builder.addField("👤 Player", playerName, true);
+        builder.addField("📌 Status", ticket.status().name(), true);
+        builder.addField("🔥 Priority", ticket.priority().name(), true);
         if (ticket.claimedBy() != null) {
-            builder.addField("Claimed by", "<@" + ticket.claimedBy() + ">", true);
+            builder.addField("🙋 Claimed by", "<@" + ticket.claimedBy() + ">", true);
         }
         builder.setFooter("SOS-Staff v" + VersionInfo.version());
         builder.setTimestamp(Instant.now());

@@ -131,7 +131,7 @@ public final class ButtonHandler {
         if (player == null) {
             return;
         }
-        player.getScheduler().run(plugin, scheduledTask -> player.sendMessage(miniMessage.deserialize(
+        player.getScheduler().run(plugin, scheduledTask -> player.sendActionBar(miniMessage.deserialize(
                 langManager.get(Message.TICKET_REOPEN_NOTIFY, Map.of("id", String.valueOf(ticket.id()))))), null);
     }
 

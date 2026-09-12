@@ -12,6 +12,8 @@ import fr.mathildeuh.sosstaff.ticket.TicketCreationResult;
 import fr.mathildeuh.sosstaff.ticket.TicketPriority;
 import fr.mathildeuh.sosstaff.ticket.TicketStatus;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -154,7 +156,7 @@ public final class CreationMenu {
     private void notify(Player player, TicketCreationResult result) {
         switch (result) {
             case TicketCreationResult.Created created ->
-                    player.sendMessage(miniMessage.deserialize(langManager.get(Message.TICKET_CREATE_SUCCESS,
+                    player.sendActionBar(miniMessage.deserialize(langManager.get(Message.TICKET_CREATE_SUCCESS,
                             Map.of("id", String.valueOf(created.ticket().id())))));
             case TicketCreationResult.RejectedTooManyOpenTickets rejected ->
                     player.sendMessage(miniMessage.deserialize(langManager.get(Message.TICKET_CREATE_REJECTED_TOO_MANY_OPEN,
@@ -168,7 +170,9 @@ public final class CreationMenu {
     private ItemStack categoryItem(CategoryConfig category) {
         ItemStack item = new ItemStack(category.icon());
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(miniMessage.deserialize("<color:" + category.colorHex() + ">" + category.displayName() + "</color>"));
+        meta.displayName(miniMessage.deserialize("<bold><color:" + category.colorHex() + ">"
+                        + category.displayName() + "</color></bold>")
+                .decoration(TextDecoration.ITALIC, false));
         item.setItemMeta(meta);
         return item;
     }
@@ -176,7 +180,7 @@ public final class CreationMenu {
     private ItemStack presetItem(String preset) {
         ItemStack item = new ItemStack(Material.PAPER);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text(preset));
+        meta.displayName(Component.text(preset, NamedTextColor.WHITE).decoration(TextDecoration.ITALIC, false));
         item.setItemMeta(meta);
         return item;
     }
@@ -184,7 +188,8 @@ public final class CreationMenu {
     private ItemStack writeYourOwnItem() {
         ItemStack item = new ItemStack(Material.WRITABLE_BOOK);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(miniMessage.deserialize(langManager.get(Message.GUI_CREATION_WRITE_YOUR_OWN, Map.of())));
+        meta.displayName(miniMessage.deserialize(langManager.get(Message.GUI_CREATION_WRITE_YOUR_OWN, Map.of()))
+                .decoration(TextDecoration.ITALIC, false));
         item.setItemMeta(meta);
         return item;
     }

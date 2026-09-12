@@ -9,7 +9,10 @@ import fr.mathildeuh.sosstaff.session.TicketSession;
 import fr.mathildeuh.sosstaff.ticket.Ticket;
 import fr.mathildeuh.sosstaff.ticket.TicketService;
 import fr.mathildeuh.sosstaff.ticket.TicketStatus;
+import fr.mathildeuh.sosstaff.util.Colors;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -136,7 +139,9 @@ public final class AdminPanel {
         ItemStack item = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) item.getItemMeta();
         meta.setOwningPlayer(offlinePlayer);
-        meta.displayName(Component.text("#" + ticket.id() + " " + playerName));
+        meta.displayName(Component.text("#" + ticket.id() + " ", NamedTextColor.GOLD)
+                .append(Component.text(playerName, NamedTextColor.WHITE))
+                .decoration(TextDecoration.ITALIC, false));
 
         CategoryConfig category = configManager.categories().get(ticket.category());
         String categoryName = category != null ? category.displayName() : ticket.category();
@@ -154,7 +159,9 @@ public final class AdminPanel {
         ItemMeta meta = item.getItemMeta();
         String label = status == null ? langManager.get(Message.GUI_ADMIN_PANEL_FILTER_ALL, Map.of()) : status.name();
         boolean active = currentFilter.equals(Optional.ofNullable(status));
-        meta.displayName(Component.text((active ? "> " : "") + label));
+        NamedTextColor color = active ? NamedTextColor.GREEN : NamedTextColor.GRAY;
+        meta.displayName(Component.text((active ? "▶ " : "") + label, color)
+                .decoration(TextDecoration.ITALIC, false));
         item.setItemMeta(meta);
         return item;
     }
@@ -176,7 +183,8 @@ public final class AdminPanel {
     private ItemStack arrowItem(String label) {
         ItemStack item = new ItemStack(Material.ARROW);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text(label));
+        meta.displayName(miniMessage.deserialize("<color:" + Colors.ACCENT + ">" + label + "</color>")
+                .decoration(TextDecoration.ITALIC, false));
         item.setItemMeta(meta);
         return item;
     }

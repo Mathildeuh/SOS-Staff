@@ -22,9 +22,9 @@ categories:
 discord:
   token: ""                # set via the SOSSTAFF_DISCORD_TOKEN environment variable in production, never commit a real token
   category:
-    name: "Ticket Support"
+    name: "🎫 Ticket Support"
     auto-create: true
-    archived-category-name: "Archived Tickets"
+    archived-category-name: "📁 Archived Tickets"
   channel:
     name-format: "ticket-%id%-%player%"
     topic-format: "Ticket #%id% - %category% - Priority: %priority%"
@@ -35,9 +35,9 @@ discord:
   mentions:
     on-create:
       roles: ["123456789012345678"]
-      message: "New ticket from **%player%** - %category%"
+      message: "🔔 New ticket from **%player%** - %category%"
     on-escalate:
-      message: "Ticket #%id% unanswered for %minutes% min"
+      message: "⚠️ Ticket #%id% unanswered for %minutes% min"
   on-close:
     action: ARCHIVE
     lock-channel: true
@@ -45,19 +45,19 @@ discord:
   action-buttons:
     heal-player:
       enabled: true
-      label: "Heal"
+      label: "❤️ Heal"
       command: HEAL
       permission: "sosstaff.action.heal-player"
       requires-online: true
     feed-player:
       enabled: true
-      label: "Feed"
+      label: "🍗 Feed"
       command: FEED
       permission: "sosstaff.action.feed-player"
       requires-online: true
     force-reconnect:
       enabled: true
-      label: "Force Reconnect"
+      label: "🔌 Force Reconnect"
       command: KICK
       permission: "sosstaff.action.force-reconnect"
       requires-online: true
@@ -65,7 +65,7 @@ discord:
       kick-reason: "Reconnection requested by support - %staff%"
     teleport-spawn:
       enabled: false
-      label: "TP Spawn"
+      label: "🏠 TP Spawn"
       command: "tp %player% 0 100 0"
       permission: "sosstaff.action.teleport-spawn"
       requires-online: true

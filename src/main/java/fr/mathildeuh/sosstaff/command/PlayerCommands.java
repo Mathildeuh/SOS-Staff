@@ -129,7 +129,7 @@ public final class PlayerCommands {
     private void handleCreationResult(Player player, TicketCreationResult result) {
         switch (result) {
             case TicketCreationResult.Created created ->
-                    send(player, Message.TICKET_CREATE_SUCCESS, Map.of("id", String.valueOf(created.ticket().id())));
+                    sendActionBar(player, Message.TICKET_CREATE_SUCCESS, Map.of("id", String.valueOf(created.ticket().id())));
             case TicketCreationResult.RejectedTooManyOpenTickets rejected ->
                     send(player, Message.TICKET_CREATE_REJECTED_TOO_MANY_OPEN,
                             Map.of("id", String.valueOf(rejected.existingTicket().id())));
@@ -161,7 +161,7 @@ public final class PlayerCommands {
         }
         ticketService.close(ticket.id(), reason).thenAccept(closed -> {
             sessionManager.closeByTicketId(closed.id());
-            runOnPlayerThread(player, () -> send(player, successMessage, Map.of("id", String.valueOf(closed.id()))));
+            runOnPlayerThread(player, () -> sendActionBar(player, successMessage, Map.of("id", String.valueOf(closed.id()))));
         }).exceptionally(throwable -> logFailure(player, "close your ticket", throwable));
     }
 
@@ -210,5 +210,14 @@ public final class PlayerCommands {
 
     private void send(Player player, Message message, Map<String, String> placeholders) {
         player.sendMessage(miniMessage.deserialize(langManager.get(message, placeholders)));
+    }
+
+    /**
+     * Short, transient confirmations (a ticket was created/closed/cancelled) go to the action
+     * bar instead of chat, per the project's own art-direction call - they'd otherwise get lost
+     * in scrollback within seconds anyway, and this keeps chat free of plugin noise.
+     */
+    private void sendActionBar(Player player, Message message, Map<String, String> placeholders) {
+        player.sendActionBar(miniMessage.deserialize(langManager.get(message, placeholders)));
     }
 }

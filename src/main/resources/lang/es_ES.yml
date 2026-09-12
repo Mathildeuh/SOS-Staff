@@ -13,7 +13,7 @@ general:
 
 ticket:
   create:
-    success: "¡Ticket #%id% creado! El personal te atenderá en breve."
+    success: "<gradient:#57F287:#5865F2>¡Ticket #%id% creado!</gradient> El personal te atenderá en breve."
     unknown-category: "Categoría desconocida: '%category%'."
     rejected:
       too-many-open: "Ya tienes un ticket abierto: #%id%."
@@ -27,24 +27,24 @@ ticket:
     entry: "#%id% [%category%] %status%"
   close:
     none-active: "No tienes ningún ticket activo para cerrar."
-    success: "Ticket #%id% cerrado."
+    success: "<color:#ED4245>Ticket #%id% cerrado.</color>"
   cancel:
     none-active: "No tienes ningún ticket activo para cancelar."
-    success: "Ticket #%id% cancelado."
+    success: "<color:#ED4245>Ticket #%id% cancelado.</color>"
   reopen:
-    notify: "Tu ticket #%id% ha sido reabierto por el personal."
+    notify: "<gradient:#FF5A36:#5865F2>Tu ticket #%id% ha sido reabierto por el personal.</gradient>"
 
 chat:
   staff-reply: "<color:#5865F2>[Soporte]</color> <white>%author%</white>: %message%"
 
 gui:
   creation:
-    title: "Nuevo ticket"
-    write-your-own: "Escribirlo yo mismo"
+    title: "<gradient:#FF5A36:#5865F2><bold>Nuevo ticket</bold></gradient>"
+    write-your-own: "<color:#5865F2>Escribirlo yo mismo</color>"
   admin-panel:
-    title: "SOS-Staff - Tickets"
-    ticket-lore: "%category% - %status% - %priority%"
-    filter-all: "Todos los tickets"
+    title: "<gradient:#5865F2:#FF5A36><bold>SOS-Staff Tickets</bold></gradient>"
+    ticket-lore: "<gray>%category%</gray> <dark_gray>|</dark_gray> <white>%status%</white> <dark_gray>|</dark_gray> <yellow>%priority%</yellow>"
+    filter-all: "<color:#57F287>Todos los tickets</color>"
 
 admin:
   attached-to-ticket: "Ahora estás conectado al ticket #%id% - tu chat se retransmitirá a Discord."
