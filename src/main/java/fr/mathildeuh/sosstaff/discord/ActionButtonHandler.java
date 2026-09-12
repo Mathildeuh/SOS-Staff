@@ -68,7 +68,7 @@ public final class ActionButtonHandler {
             return;
         }
 
-        event.deferEdit().queue();
+        event.deferReply(true).queue();
         runButton(button, ticketId, staff, event.getUser().getName(), event.getHook());
     }
 
@@ -83,7 +83,10 @@ public final class ActionButtonHandler {
             event.editMessage("This action can no longer be confirmed.").setComponents(List.of()).queue();
             return;
         }
-        event.deferEdit().queue();
+        // Clear the Confirm/Cancel buttons synchronously, in the same call that acknowledges the
+        // click, so a second rapid click lands on a message with no components left to click -
+        // otherwise the async work below leaves the buttons live long enough to spam-click "Confirm".
+        event.editComponents(List.of()).queue();
         runButton(button, ticketId, staff, event.getUser().getName(), event.getHook());
     }
 
@@ -116,7 +119,7 @@ public final class ActionButtonHandler {
                     action -> action.execute(plugin, target, staff, reason),
                     () -> runRawCommand(button.command(), target, staffDisplayName, ticketId));
 
-            hook.editOriginal("'" + button.label() + "' executed by " + staffDisplayName + ".").queue();
+            hook.editOriginal("'" + button.label() + "' executed by " + staffDisplayName + ".").setComponents(List.of()).queue();
         });
     }
 
