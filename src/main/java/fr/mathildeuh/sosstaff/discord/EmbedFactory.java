@@ -57,12 +57,10 @@ public final class EmbedFactory {
     }
 
     /**
-     * claimedByName is the Minecraft name of whoever claimed the ticket, resolved by the
-     * caller - claimed_by in the database is a Minecraft UUID, not a Discord user id, so
-     * there is no Discord mention to render here (see ChannelOrchestrator's class comment
-     * for why no such link exists in this project).
+     * claimed_by is a Discord user id, so "Claimed by" renders as a live Discord mention -
+     * no name resolution needed, and it stays accurate even if that person renames themselves.
      */
-    public static MessageEmbed ticketEmbed(Ticket ticket, CategoryConfig category, String playerName, String claimedByName) {
+    public static MessageEmbed ticketEmbed(Ticket ticket, CategoryConfig category, String playerName) {
         EmbedBuilder builder = new EmbedBuilder();
         builder.setTitle("Ticket #" + ticket.id() + " - " + category.displayName());
         builder.setColor(parseColor(category.colorHex()));
@@ -70,8 +68,8 @@ public final class EmbedFactory {
         builder.addField("Player", playerName, true);
         builder.addField("Status", ticket.status().name(), true);
         builder.addField("Priority", ticket.priority().name(), true);
-        if (claimedByName != null) {
-            builder.addField("Claimed by", claimedByName, true);
+        if (ticket.claimedBy() != null) {
+            builder.addField("Claimed by", "<@" + ticket.claimedBy() + ">", true);
         }
         builder.setFooter("SOS-Staff v" + VersionInfo.version());
         builder.setTimestamp(Instant.now());

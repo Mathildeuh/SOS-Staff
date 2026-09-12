@@ -88,14 +88,14 @@ class SqliteTicketRepositoryTest {
     @Test
     void claimSetsStatusAndClaimedBy() throws Exception {
         UUID playerUuid = UUID.randomUUID();
-        UUID staffUuid = UUID.randomUUID();
+        String claimedByDiscordId = "123456789012345678";
         Ticket ticket = get(repository.create(playerUuid, "bug", TicketPriority.MEDIUM));
 
-        get(repository.claim(ticket.id(), staffUuid));
+        get(repository.claim(ticket.id(), claimedByDiscordId));
 
         Ticket claimed = get(repository.findById(ticket.id())).orElseThrow();
         assertEquals(TicketStatus.CLAIMED, claimed.status());
-        assertEquals(staffUuid, claimed.claimedBy());
+        assertEquals(claimedByDiscordId, claimed.claimedBy());
     }
 
     @Test

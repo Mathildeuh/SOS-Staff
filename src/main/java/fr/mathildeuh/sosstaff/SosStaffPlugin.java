@@ -21,7 +21,6 @@ import fr.mathildeuh.sosstaff.discord.FrozenPlayers;
 import fr.mathildeuh.sosstaff.discord.InternalActionRegistry;
 import fr.mathildeuh.sosstaff.discord.WebhookRelay;
 import fr.mathildeuh.sosstaff.gui.AdminPanel;
-import fr.mathildeuh.sosstaff.gui.AnvilInputGui;
 import fr.mathildeuh.sosstaff.gui.CreationMenu;
 import fr.mathildeuh.sosstaff.gui.GuiClickListener;
 import fr.mathildeuh.sosstaff.gui.PendingChatPrompts;
@@ -116,7 +115,7 @@ public final class SosStaffPlugin extends JavaPlugin {
         discordGateway = new DiscordGateway(getLogger());
         EscalationScheduler escalationScheduler = new EscalationScheduler(this, ticketService, configManager, discordGateway, getLogger());
         ButtonHandler buttonHandler = new ButtonHandler(
-                this, ticketService, configManager, ticketMessageRepository, sessionManager, escalationScheduler);
+                this, ticketService, configManager, ticketMessageRepository, sessionManager, escalationScheduler, langManager);
         ActionButtonHandler actionButtonHandler = new ActionButtonHandler(this, configManager, ticketService, internalActionRegistry);
 
         DiscordMessageListener discordMessageListener =
@@ -146,9 +145,7 @@ public final class SosStaffPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(liveChatListener, this);
         getServer().getPluginManager().registerEvents(new FreezeListener(frozenPlayers), this);
 
-        AnvilInputGui anvilInputGui = new AnvilInputGui();
-        getServer().getPluginManager().registerEvents(anvilInputGui, this);
-        CreationMenu creationMenu = new CreationMenu(this, configManager, langManager, creationCoordinator, anvilInputGui, pendingChatPrompts);
+        CreationMenu creationMenu = new CreationMenu(this, configManager, langManager, creationCoordinator, pendingChatPrompts);
         AdminPanel adminPanel = new AdminPanel(this, ticketService, configManager, langManager, sessionManager);
         getServer().getPluginManager().registerEvents(new GuiClickListener(creationMenu, adminPanel), this);
 

@@ -19,6 +19,7 @@ public enum Message {
     TICKET_CLOSE_SUCCESS("ticket.close.success"),
     TICKET_CANCEL_NONE_ACTIVE("ticket.cancel.none-active"),
     TICKET_CANCEL_SUCCESS("ticket.cancel.success"),
+    TICKET_REOPEN_NOTIFY("ticket.reopen.notify"),
     CHAT_STAFF_REPLY("chat.staff-reply"),
 
     CREATION_DEFAULT_PROMPT("creation.default.prompt"),

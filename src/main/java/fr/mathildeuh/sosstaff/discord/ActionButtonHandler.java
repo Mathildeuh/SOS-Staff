@@ -19,14 +19,18 @@ import java.util.List;
  * internal keys (HEAL, FEED, KICK, ...) via InternalActionRegistry, or a raw command string with
  * placeholders substituted, dispatched as the console.
  *
- * <p>The "permission" field on each button is a Bukkit permission node (matching the
- * sosstaff.action.* convention used everywhere else in config.yml), which only means something
- * once resolved against an actual Bukkit Permissible. Since the button was clicked in Discord,
- * this resolves the clicker to an online player by matching their Discord display name (see
- * StaffResolver) and checks the permission against that player - there is no other way to check
- * a Bukkit permission for someone who only exists as a Discord account.
+ * <p>Every action here targets the ticket's player, not the clicking staff member, so it works
+ * from Discord regardless of whether that staff member is online in Minecraft at all - the only
+ * exception is TELEPORT_TO_PLAYER/TELEPORT_PLAYER_TO_STAFF, which inherently need a real,
+ * resolvable Minecraft character to move. The "permission" field is a Bukkit permission node; it
+ * is checked when the clicker resolves to an online player by Discord-name match (see
+ * StaffResolver), and otherwise trusted to whoever already has access to the channel
+ * (discord.permissions.staff-roles) - there is no way to check a Bukkit permission for someone
+ * who only exists as a Discord account with no online session and no account-linking system.
  */
 public final class ActionButtonHandler {
+
+    private static final List<String> REQUIRES_ONLINE_STAFF = List.of("TELEPORT_TO_PLAYER", "TELEPORT_PLAYER_TO_STAFF");
 
     private final JavaPlugin plugin;
     private final ConfigManager configManager;
@@ -49,9 +53,13 @@ public final class ActionButtonHandler {
         }
 
         Player staff = StaffResolver.resolveByDiscordName(plugin, event.getUser().getName());
-        if (staff == null || !staff.hasPermission(button.permission())) {
-            event.reply("You need to be online in-game (with a Minecraft username matching your Discord name) "
-                    + "and hold '" + button.permission() + "' to use this action.").setEphemeral(true).queue();
+        if (staff == null && REQUIRES_ONLINE_STAFF.contains(button.command().toUpperCase())) {
+            event.reply("'" + button.label() + "' moves your own Minecraft character, so it needs your Discord "
+                    + "display name to match an online Minecraft username.").setEphemeral(true).queue();
+            return;
+        }
+        if (staff != null && !staff.hasPermission(button.permission())) {
+            event.reply("You need '" + button.permission() + "' to use this action.").setEphemeral(true).queue();
             return;
         }
 
@@ -61,18 +69,22 @@ public final class ActionButtonHandler {
         }
 
         event.deferEdit().queue();
-        runButton(button, ticketId, staff, event.getHook());
+        runButton(button, ticketId, staff, event.getUser().getName(), event.getHook());
     }
 
     public void handleConfirm(ButtonInteractionEvent event, String buttonId, long ticketId) {
         DiscordConfig.ActionButton button = configManager.discord().actionButtons().get(buttonId);
+        if (button == null) {
+            event.editMessage("This action can no longer be confirmed.").setComponents(List.of()).queue();
+            return;
+        }
         Player staff = StaffResolver.resolveByDiscordName(plugin, event.getUser().getName());
-        if (button == null || staff == null || !staff.hasPermission(button.permission())) {
+        if (staff != null && !staff.hasPermission(button.permission())) {
             event.editMessage("This action can no longer be confirmed.").setComponents(List.of()).queue();
             return;
         }
         event.deferEdit().queue();
-        runButton(button, ticketId, staff, event.getHook());
+        runButton(button, ticketId, staff, event.getUser().getName(), event.getHook());
     }
 
     public void handleCancel(ButtonInteractionEvent event) {
@@ -86,7 +98,7 @@ public final class ActionButtonHandler {
         event.reply("Confirm running '" + button.label() + "'?").setEphemeral(true).addComponents(confirmRow).queue();
     }
 
-    private void runButton(DiscordConfig.ActionButton button, long ticketId, Player staff, InteractionHook hook) {
+    private void runButton(DiscordConfig.ActionButton button, long ticketId, Player staff, String staffDisplayName, InteractionHook hook) {
         ticketService.findById(ticketId).thenAccept(ticketOpt -> {
             if (ticketOpt.isEmpty()) {
                 hook.editOriginal("Ticket #" + ticketId + " no longer exists.").queue();
@@ -99,17 +111,17 @@ public final class ActionButtonHandler {
                 return;
             }
 
-            String reason = target == null ? null : substitute(button.kickReason(), target.getName(), staff.getName(), ticketId);
+            String reason = target == null ? null : substitute(button.kickReason(), target.getName(), staffDisplayName, ticketId);
             internalActionRegistry.find(button.command()).ifPresentOrElse(
                     action -> action.execute(plugin, target, staff, reason),
-                    () -> runRawCommand(button.command(), target, staff, ticketId));
+                    () -> runRawCommand(button.command(), target, staffDisplayName, ticketId));
 
-            hook.editOriginal("'" + button.label() + "' executed by " + staff.getName() + ".").queue();
+            hook.editOriginal("'" + button.label() + "' executed by " + staffDisplayName + ".").queue();
         });
     }
 
-    private void runRawCommand(String rawCommand, Player target, Player staff, long ticketId) {
-        String command = substitute(rawCommand, target == null ? null : target.getName(), staff.getName(), ticketId);
+    private void runRawCommand(String rawCommand, Player target, String staffDisplayName, long ticketId) {
+        String command = substitute(rawCommand, target == null ? null : target.getName(), staffDisplayName, ticketId);
         Bukkit.getGlobalRegionScheduler().run(plugin, ignored ->
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command));
     }

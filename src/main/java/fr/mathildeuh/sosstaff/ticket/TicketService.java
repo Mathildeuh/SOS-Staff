@@ -49,8 +49,8 @@ public final class TicketService {
                         .orElseGet(() -> create(playerUuid, category, priority)));
     }
 
-    public CompletableFuture<Ticket> claim(long ticketId, UUID staffUuid) {
-        return repository.claim(ticketId, staffUuid).thenCompose(ignored -> requireById(ticketId))
+    public CompletableFuture<Ticket> claim(long ticketId, String claimedByDiscordId) {
+        return repository.claim(ticketId, claimedByDiscordId).thenCompose(ignored -> requireById(ticketId))
                 .thenApply(this::refreshCache);
     }
 

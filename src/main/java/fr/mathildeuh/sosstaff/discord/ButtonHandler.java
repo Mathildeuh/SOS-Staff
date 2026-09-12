@@ -4,7 +4,10 @@ import fr.mathildeuh.sosstaff.api.event.TicketClaimEvent;
 import fr.mathildeuh.sosstaff.api.event.TicketCloseEvent;
 import fr.mathildeuh.sosstaff.config.CategoryConfig;
 import fr.mathildeuh.sosstaff.config.ConfigManager;
+import fr.mathildeuh.sosstaff.lang.LangManager;
+import fr.mathildeuh.sosstaff.lang.Message;
 import fr.mathildeuh.sosstaff.session.LiveChatSessionManager;
+import fr.mathildeuh.sosstaff.session.TicketSession;
 import fr.mathildeuh.sosstaff.ticket.Ticket;
 import fr.mathildeuh.sosstaff.ticket.TicketMessage;
 import fr.mathildeuh.sosstaff.ticket.TicketMessageRepository;
@@ -14,6 +17,7 @@ import fr.mathildeuh.sosstaff.ticket.TicketStatus;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -22,6 +26,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -37,15 +42,18 @@ public final class ButtonHandler {
     private final TicketMessageRepository messageRepository;
     private final LiveChatSessionManager sessionManager;
     private final EscalationScheduler escalationScheduler;
+    private final LangManager langManager;
+    private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
     public ButtonHandler(JavaPlugin plugin, TicketService ticketService, ConfigManager configManager,
                           TicketMessageRepository messageRepository, LiveChatSessionManager sessionManager,
-                          EscalationScheduler escalationScheduler) {
+                          EscalationScheduler escalationScheduler, LangManager langManager) {
         this.plugin = plugin;
         this.ticketService = ticketService;
         this.configManager = configManager;
         this.messageRepository = messageRepository;
         this.sessionManager = sessionManager;
+        this.langManager = langManager;
         this.escalationScheduler = escalationScheduler;
     }
 
@@ -62,23 +70,20 @@ public final class ButtonHandler {
     }
 
     private void handleClaim(ButtonInteractionEvent event, long ticketId) {
-        Player staff = StaffResolver.resolveByDiscordName(plugin, event.getUser().getName());
-        if (staff == null) {
-            replyNoStaffMatch(event);
-            return;
-        }
         event.deferEdit().queue();
+        String discordUserId = event.getUser().getId();
         ticketService.findById(ticketId).thenAccept(ticketOpt -> ticketOpt.ifPresent(ticket ->
-                staff.getScheduler().run(plugin, scheduledTask -> claimIfNotCancelled(event, ticket, staff), null)));
+                plugin.getServer().getGlobalRegionScheduler().run(plugin,
+                        scheduledTask -> claimIfNotCancelled(event, ticket, discordUserId))));
     }
 
-    private void claimIfNotCancelled(ButtonInteractionEvent event, Ticket ticket, Player staff) {
-        TicketClaimEvent claimEvent = new TicketClaimEvent(ticket, staff.getUniqueId());
+    private void claimIfNotCancelled(ButtonInteractionEvent event, Ticket ticket, String discordUserId) {
+        TicketClaimEvent claimEvent = new TicketClaimEvent(ticket, discordUserId);
         plugin.getServer().getPluginManager().callEvent(claimEvent);
         if (claimEvent.isCancelled()) {
             return;
         }
-        ticketService.claim(ticket.id(), staff.getUniqueId()).thenAccept(claimed -> updateEmbed(event, claimed));
+        ticketService.claim(ticket.id(), discordUserId).thenAccept(claimed -> updateEmbed(event, claimed));
     }
 
     private void handleClose(ButtonInteractionEvent event, long ticketId) {
@@ -103,7 +108,31 @@ public final class ButtonHandler {
     private void handleReopen(ButtonInteractionEvent event, long ticketId) {
         event.deferEdit().queue();
         escalationScheduler.onTicketNoLongerPending(ticketId);
-        ticketService.reopen(ticketId).thenAccept(ticket -> updateEmbed(event, ticket));
+        ticketService.reopen(ticketId).thenAccept(ticket -> {
+            reopenLiveChatSession(ticket);
+            notifyPlayerOfReopen(ticket);
+            updateEmbed(event, ticket);
+        });
+    }
+
+    /**
+     * Closing a ticket tears down its live-chat session (see PlayerCommands/ButtonHandler
+     * close handling), so reopening it from Discord has to recreate that session - otherwise
+     * the player's chat would stay disconnected from a ticket that looks open again.
+     */
+    private void reopenLiveChatSession(Ticket ticket) {
+        if (ticket.discordChannelId() != null) {
+            sessionManager.open(new TicketSession(ticket.playerUuid(), ticket.id(), ticket.discordChannelId()));
+        }
+    }
+
+    private void notifyPlayerOfReopen(Ticket ticket) {
+        Player player = plugin.getServer().getPlayer(ticket.playerUuid());
+        if (player == null) {
+            return;
+        }
+        player.getScheduler().run(plugin, scheduledTask -> player.sendMessage(miniMessage.deserialize(
+                langManager.get(Message.TICKET_REOPEN_NOTIFY, Map.of("id", String.valueOf(ticket.id()))))), null);
     }
 
     private void handlePriorityCycle(ButtonInteractionEvent event, long ticketId) {
@@ -123,15 +152,16 @@ public final class ButtonHandler {
     private void handlePing(ButtonInteractionEvent event, long ticketId) {
         var staffRoles = configManager.discord().permissions().staffRoleIds();
         String roleMentions = staffRoles.stream().map(id -> "<@&" + id + ">").collect(Collectors.joining(" "));
-        String message = configManager.discord().mentions().onEscalate().message().replace("%id%", String.valueOf(ticketId));
+        String message = configManager.discord().mentions().onEscalate().message()
+                .replace("%id%", String.valueOf(ticketId))
+                .replace("%minutes%", String.valueOf(configManager.noClaimAfterMinutes()));
         event.reply((roleMentions.isBlank() ? "" : roleMentions + " ") + message).queue();
     }
 
     private void updateEmbed(ButtonInteractionEvent event, Ticket ticket) {
         CategoryConfig category = configManager.categories().get(ticket.category());
         String playerName = offlineName(ticket.playerUuid());
-        String claimedByName = ticket.claimedBy() == null ? null : offlineName(ticket.claimedBy());
-        MessageEmbed embed = EmbedFactory.ticketEmbed(ticket, category, playerName, claimedByName);
+        MessageEmbed embed = EmbedFactory.ticketEmbed(ticket, category, playerName);
 
         boolean closed = ticket.status() == TicketStatus.CLOSED || ticket.status() == TicketStatus.ARCHIVED;
         List<ActionRow> rows = new ArrayList<>();
@@ -144,12 +174,6 @@ public final class ButtonHandler {
         }
 
         event.getHook().editOriginalEmbeds(embed).setComponents(rows).queue();
-    }
-
-    private void replyNoStaffMatch(ButtonInteractionEvent event) {
-        event.reply("No online Minecraft player matches your Discord name '" + event.getUser().getName()
-                        + "'. This action needs your Discord display name to match your Minecraft username.")
-                .setEphemeral(true).queue();
     }
 
     private String offlineName(UUID uuid) {

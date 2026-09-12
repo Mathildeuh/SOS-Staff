@@ -114,7 +114,7 @@ public final class ChannelOrchestrator {
                 + onCreate.message().replace("%player%", playerName).replace("%category%", category.displayName());
 
         channel.sendMessage(pingMessage)
-                .addEmbeds(EmbedFactory.ticketEmbed(ticket, category, playerName, null))
+                .addEmbeds(EmbedFactory.ticketEmbed(ticket, category, playerName))
                 .addComponents(buttonRows)
                 .queue();
     }

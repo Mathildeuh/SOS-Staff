@@ -31,6 +31,8 @@ ticket:
   cancel:
     none-active: "No tienes ningún ticket activo para cancelar."
     success: "Ticket #%id% cancelado."
+  reopen:
+    notify: "Tu ticket #%id% ha sido reabierto por el personal."
 
 chat:
   staff-reply: "<color:#5865F2>[Soporte]</color> <white>%author%</white>: %message%"

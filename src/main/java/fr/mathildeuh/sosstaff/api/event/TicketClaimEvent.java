@@ -4,10 +4,9 @@ import fr.mathildeuh.sosstaff.ticket.Ticket;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.HandlerList;
 
-import java.util.UUID;
-
 /**
- * Fired right before a staff member claims an existing, already-persisted ticket. Cancelling
+ * Fired right before a staff member claims an existing, already-persisted ticket. Claiming
+ * happens purely on Discord and never requires the claimer to be online in-game. Cancelling
  * this event stops the claim from being recorded - the ticket is left exactly as
  * {@link #getTicket()} describes it.
  */
@@ -15,19 +14,19 @@ public final class TicketClaimEvent extends TicketEvent implements Cancellable {
 
     private static final HandlerList HANDLERS = new HandlerList();
 
-    private final UUID staffUuid;
+    private final String discordUserId;
     private boolean cancelled;
 
-    public TicketClaimEvent(Ticket ticket, UUID staffUuid) {
+    public TicketClaimEvent(Ticket ticket, String discordUserId) {
         super(ticket);
-        this.staffUuid = staffUuid;
+        this.discordUserId = discordUserId;
     }
 
     /**
-     * The Minecraft UUID of the staff member about to claim the ticket.
+     * The Discord user id (snowflake) of whoever is about to claim the ticket.
      */
-    public UUID getStaffUuid() {
-        return staffUuid;
+    public String getDiscordUserId() {
+        return discordUserId;
     }
 
     @Override

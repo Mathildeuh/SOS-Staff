@@ -124,12 +124,12 @@ class TicketServiceTest {
         TicketService service = new TicketService(repository, configManager);
         Ticket ticket = ((TicketCreationResult.Created) get(
                 service.createTicket(UUID.randomUUID(), "bug", TicketPriority.MEDIUM, false))).ticket();
-        UUID staffUuid = UUID.randomUUID();
+        String claimedByDiscordId = "123456789012345678";
 
-        Ticket claimed = get(service.claim(ticket.id(), staffUuid));
+        Ticket claimed = get(service.claim(ticket.id(), claimedByDiscordId));
 
         assertEquals(TicketStatus.CLAIMED, claimed.status());
-        assertEquals(staffUuid, claimed.claimedBy());
+        assertEquals(claimedByDiscordId, claimed.claimedBy());
     }
 
     @Test
@@ -175,7 +175,7 @@ class TicketServiceTest {
     void findTicketsNeedingEscalationReturnsOnlyOldUnclaimedOpenTickets() throws Exception {
         Ticket oldEnough = get(repository.create(UUID.randomUUID(), "bug", TicketPriority.MEDIUM));
         Ticket claimed = get(repository.create(UUID.randomUUID(), "bug", TicketPriority.MEDIUM));
-        get(repository.claim(claimed.id(), UUID.randomUUID()));
+        get(repository.claim(claimed.id(), "123456789012345678"));
         Instant now = get(repository.findById(oldEnough.id())).orElseThrow().createdAt();
 
         TicketService service = new TicketService(repository, configManager, Clock.fixed(now.plusSeconds(20 * 60), ZoneOffset.UTC));

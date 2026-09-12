@@ -32,12 +32,12 @@ class TicketEventsTest {
     }
 
     @Test
-    void ticketClaimEventExposesTheClaimingStaffMember() {
-        UUID staffUuid = UUID.randomUUID();
-        TicketClaimEvent event = new TicketClaimEvent(TICKET, staffUuid);
+    void ticketClaimEventExposesTheClaimingDiscordUser() {
+        String discordUserId = "123456789012345678";
+        TicketClaimEvent event = new TicketClaimEvent(TICKET, discordUserId);
 
         assertSame(TICKET, event.getTicket());
-        assertEquals(staffUuid, event.getStaffUuid());
+        assertEquals(discordUserId, event.getDiscordUserId());
         assertFalse(event.isCancelled());
 
         event.setCancelled(true);

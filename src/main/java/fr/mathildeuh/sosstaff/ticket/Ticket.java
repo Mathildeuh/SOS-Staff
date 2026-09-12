@@ -10,7 +10,9 @@ public record Ticket(
         TicketStatus status,
         TicketPriority priority,
         String discordChannelId,
-        UUID claimedBy,
+        // A Discord user id (snowflake), not a Minecraft account - claiming happens purely on
+        // Discord and never requires the staff member to be online in-game (see ButtonHandler).
+        String claimedBy,
         Instant createdAt,
         Instant closedAt,
         String closeReason,

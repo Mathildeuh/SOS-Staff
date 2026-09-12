@@ -31,7 +31,7 @@ public interface TicketRepository {
 
     CompletableFuture<Void> updateStatus(long id, TicketStatus status);
 
-    CompletableFuture<Void> claim(long id, UUID staffUuid);
+    CompletableFuture<Void> claim(long id, String claimedByDiscordId);
 
     CompletableFuture<Void> updatePriority(long id, TicketPriority priority);
 

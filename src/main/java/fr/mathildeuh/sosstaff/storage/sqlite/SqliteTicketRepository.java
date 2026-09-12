@@ -178,10 +178,10 @@ public final class SqliteTicketRepository implements TicketRepository {
     }
 
     @Override
-    public CompletableFuture<Void> claim(long id, UUID staffUuid) {
+    public CompletableFuture<Void> claim(long id, String claimedByDiscordId) {
         return update("UPDATE tickets SET status = ?, claimed_by = ? WHERE id = ?", statement -> {
             statement.setString(1, TicketStatus.CLAIMED.name());
-            statement.setString(2, staffUuid.toString());
+            statement.setString(2, claimedByDiscordId);
             statement.setLong(3, id);
         });
     }
@@ -265,8 +265,7 @@ public final class SqliteTicketRepository implements TicketRepository {
         TicketPriority priority = TicketPriority.valueOf(resultSet.getString("priority"));
         String discordChannelId = resultSet.getString("discord_channel_id");
 
-        String claimedByRaw = resultSet.getString("claimed_by");
-        UUID claimedBy = claimedByRaw == null ? null : UUID.fromString(claimedByRaw);
+        String claimedBy = resultSet.getString("claimed_by");
 
         Instant createdAt = resultSet.getTimestamp("created_at").toInstant();
 
