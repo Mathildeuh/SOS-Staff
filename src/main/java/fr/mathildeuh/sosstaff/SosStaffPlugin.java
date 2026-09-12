@@ -42,6 +42,8 @@ import fr.mathildeuh.sosstaff.ticket.TicketCreationCoordinator;
 import fr.mathildeuh.sosstaff.ticket.TicketMessageRepository;
 import fr.mathildeuh.sosstaff.ticket.TicketRepository;
 import fr.mathildeuh.sosstaff.ticket.TicketService;
+import fr.mathildeuh.sosstaff.util.UpdateChecker;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.incendo.cloud.execution.ExecutionCoordinator;
@@ -54,6 +56,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class SosStaffPlugin extends JavaPlugin {
+
+    private static final int BSTATS_SERVICE_ID = 33997;
 
     private ConfigManager configManager;
     private LangManager langManager;
@@ -158,6 +162,10 @@ public final class SosStaffPlugin extends JavaPlugin {
         getServer().getOnlinePlayers().forEach(liveChatListener::reopenSessionIfNeeded);
 
         registerSoftDependIntegrations();
+        new Metrics(this, BSTATS_SERVICE_ID);
+        if (configManager.updateCheckerEnabled()) {
+            new UpdateChecker(getLogger()).checkAsync();
+        }
 
         getLogger().info("SOS-Staff has been enabled.");
     }

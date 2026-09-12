@@ -42,6 +42,7 @@ dependencies {
         exclude(module = "opus-java")
     }
     implementation("com.github.ben-manes.caffeine:caffeine:3.2.4")
+    implementation("org.bstats:bstats-bukkit:3.2.1")
 
     // Soft-depend integrations: compile-time only, never shaded. Each hook checks the target
     // plugin's actual presence at runtime before touching any of these classes (see the
@@ -98,6 +99,7 @@ tasks {
         relocate("gnu.trove", "$libs.trove")
         relocate("org.apache.commons.collections4", "$libs.commonscollections4")
         relocate("com.github.benmanes.caffeine", "$libs.caffeine")
+        relocate("org.bstats", "$libs.bstats")
         // Deliberately NOT relocated: org.slf4j (a shared logging facade, not a private
         // implementation detail - relocating it is the opposite of what shading guides for
         // it recommend); the Kotlin stdlib (compiler-generated metadata references class
