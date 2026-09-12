@@ -7,8 +7,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
- * Tracks players who were sent a chat prompt (creation-ui: CHAT) and are expected to type their
- * next chat message as the answer, instead of it going to normal server chat.
+ * Tracks players who were sent a free-input chat prompt and are expected to type their next
+ * chat message as the answer, instead of it going to normal server chat.
  */
 public final class PendingChatPrompts {
 

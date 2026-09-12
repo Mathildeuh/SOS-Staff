@@ -4,7 +4,6 @@ import fr.mathildeuh.sosstaff.api.event.TicketCreateEvent;
 import fr.mathildeuh.sosstaff.config.CategoryConfig;
 import fr.mathildeuh.sosstaff.config.ConfigManager;
 import fr.mathildeuh.sosstaff.config.CreationMode;
-import fr.mathildeuh.sosstaff.config.CreationUi;
 import fr.mathildeuh.sosstaff.lang.LangManager;
 import fr.mathildeuh.sosstaff.lang.Message;
 import fr.mathildeuh.sosstaff.ticket.Ticket;
@@ -32,18 +31,15 @@ public final class CreationMenu {
     private final ConfigManager configManager;
     private final LangManager langManager;
     private final TicketCreationCoordinator creationCoordinator;
-    private final AnvilInputGui anvilInputGui;
     private final PendingChatPrompts pendingChatPrompts;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
     public CreationMenu(JavaPlugin plugin, ConfigManager configManager, LangManager langManager,
-                         TicketCreationCoordinator creationCoordinator, AnvilInputGui anvilInputGui,
-                         PendingChatPrompts pendingChatPrompts) {
+                         TicketCreationCoordinator creationCoordinator, PendingChatPrompts pendingChatPrompts) {
         this.plugin = plugin;
         this.configManager = configManager;
         this.langManager = langManager;
         this.creationCoordinator = creationCoordinator;
-        this.anvilInputGui = anvilInputGui;
         this.pendingChatPrompts = pendingChatPrompts;
     }
 
@@ -121,12 +117,6 @@ public final class CreationMenu {
         String prompt = category.promptKey() != null
                 ? langManager.get(category.promptKey(), Map.of())
                 : langManager.get(Message.CREATION_DEFAULT_PROMPT, Map.of());
-
-        if (configManager.creationUi() == CreationUi.GUI) {
-            anvilInputGui.open(player, miniMessage.deserialize(prompt),
-                    text -> player.getScheduler().run(plugin, scheduledTask -> createTicket(player, category.id(), text), null));
-            return;
-        }
 
         player.sendMessage(miniMessage.deserialize(prompt));
         pendingChatPrompts.await(player.getUniqueId(), category.id(),

@@ -53,10 +53,9 @@ class CreationMenuTest {
 
         JavaPlugin plugin = mock(JavaPlugin.class);
         TicketCreationCoordinator coordinator = mock(TicketCreationCoordinator.class);
-        AnvilInputGui anvilInputGui = mock(AnvilInputGui.class);
         PendingChatPrompts pendingChatPrompts = new PendingChatPrompts();
 
-        creationMenu = new CreationMenu(plugin, configManager, langManager, coordinator, anvilInputGui, pendingChatPrompts);
+        creationMenu = new CreationMenu(plugin, configManager, langManager, coordinator, pendingChatPrompts);
     }
 
     @AfterEach

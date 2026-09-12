@@ -37,7 +37,6 @@ public final class ConfigManager {
         List<String> commandAliases = List.copyOf(commands.getStringList("aliases"));
 
         CreationMode creationMode = parseEnum(yaml.getString("creation-mode", "BOTH"), CreationMode.class, "creation-mode");
-        CreationUi creationUi = parseEnum(yaml.getString("creation-ui", "GUI"), CreationUi.class, "creation-ui");
 
         ConfigurationSection categoriesSection = requireSection(yaml, "categories");
         Map<String, CategoryConfig> categories = new LinkedHashMap<>();
@@ -89,7 +88,7 @@ public final class ConfigManager {
             throw new ConfigValidationException("language.default '" + languageDefault + "' must be included in language.shipped");
         }
 
-        return new Snapshot(commandMain, commandAliases, creationMode, creationUi, Map.copyOf(categories), discord,
+        return new Snapshot(commandMain, commandAliases, creationMode, Map.copyOf(categories), discord,
                 escalationEnabled, noClaimAfterMinutes, maxOpenTicketsPerPlayer, cooldownAfterCloseSeconds,
                 antiSpamBypassPermission, storageType, mysqlSettings, gdprRetentionDays, updateCheckerEnabled,
                 languageDefault, languageShipped, languagePerPlayer);
@@ -121,10 +120,6 @@ public final class ConfigManager {
 
     public CreationMode creationMode() {
         return snapshot.creationMode();
-    }
-
-    public CreationUi creationUi() {
-        return snapshot.creationUi();
     }
 
     public Map<String, CategoryConfig> categories() {
@@ -190,7 +185,6 @@ public final class ConfigManager {
             String commandMain,
             List<String> commandAliases,
             CreationMode creationMode,
-            CreationUi creationUi,
             Map<String, CategoryConfig> categories,
             DiscordConfig discord,
             boolean escalationEnabled,

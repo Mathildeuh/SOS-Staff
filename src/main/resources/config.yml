@@ -3,7 +3,6 @@ commands:
   aliases: ["support", "sos"]
 
 creation-mode: BOTH        # PRESET | FREE_INPUT | BOTH
-creation-ui: GUI           # GUI | CHAT
 
 categories:
   bug:

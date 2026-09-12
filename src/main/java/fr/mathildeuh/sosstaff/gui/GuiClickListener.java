@@ -5,13 +5,10 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.InventoryHolder;
-import org.bukkit.inventory.view.AnvilView;
 
 import java.util.Optional;
 
 public final class GuiClickListener implements Listener {
-
-    private static final int ANVIL_RESULT_SLOT = 2;
 
     private final CreationMenu creationMenu;
     private final AdminPanel adminPanel;
@@ -26,8 +23,6 @@ public final class GuiClickListener implements Listener {
         InventoryHolder holder = event.getInventory().getHolder();
         if (holder instanceof CreationMenuHolder creationMenuHolder) {
             handleCreationMenuClick(event, creationMenuHolder);
-        } else if (holder instanceof AnvilInputHolder anvilInputHolder) {
-            handleAnvilClick(event, anvilInputHolder);
         } else if (holder instanceof AdminPanelHolder adminPanelHolder) {
             handleAdminPanelClick(event, adminPanelHolder);
         }
@@ -84,21 +79,6 @@ public final class GuiClickListener implements Listener {
         String preset = holder.presetAt(slot);
         if (preset != null) {
             creationMenu.onPresetClicked(player, holder.categoryId(), preset);
-        }
-    }
-
-    private void handleAnvilClick(InventoryClickEvent event, AnvilInputHolder holder) {
-        if (event.getClickedInventory() == null || !event.getClickedInventory().equals(event.getInventory())
-                || event.getSlot() != ANVIL_RESULT_SLOT || !(event.getView() instanceof AnvilView anvilView)) {
-            return;
-        }
-
-        event.setCancelled(true);
-        String text = anvilView.getRenameText();
-        Player player = (Player) event.getWhoClicked();
-        player.closeInventory();
-        if (text != null && !text.isBlank()) {
-            holder.onComplete().accept(text);
         }
     }
 }

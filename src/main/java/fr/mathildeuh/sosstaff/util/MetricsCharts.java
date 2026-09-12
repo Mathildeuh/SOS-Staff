@@ -21,7 +21,6 @@ public final class MetricsCharts {
     public static void register(Metrics metrics, ConfigManager configManager, DiscordGateway discordGateway) {
         metrics.addCustomChart(new SimplePie("storage_type", () -> configManager.storageType().name()));
         metrics.addCustomChart(new SimplePie("creation_mode", () -> configManager.creationMode().name()));
-        metrics.addCustomChart(new SimplePie("creation_ui", () -> configManager.creationUi().name()));
         metrics.addCustomChart(new SimplePie("default_language", configManager::languageDefault));
         metrics.addCustomChart(new SimplePie("escalation_enabled",
                 () -> String.valueOf(configManager.escalationEnabled())));
