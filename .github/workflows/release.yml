@@ -75,7 +75,7 @@ jobs:
       - name: Compute jar checksum
         id: checksum
         run: |
-          JAR=$(find build/libs -iname "*-all.jar")
+          JAR=$(find build/libs -iname "*.jar")
           sha256sum "$JAR" | awk '{ print $1 }' > "$JAR.sha256"
           echo "jar=$JAR" >> "$GITHUB_OUTPUT"
 
@@ -94,7 +94,7 @@ jobs:
         with:
           modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          files: build/libs/*-all.jar
+          files: build/libs/*.jar
           changelog-file: CHANGELOG.md
           version: ${{ steps.tag.outputs.version }}
           loaders: paper

@@ -73,6 +73,13 @@ tasks.withType<JavaCompile> {
 }
 
 tasks {
+    // Only the shaded jar is a useful deploy artifact - the plain, dependency-less jar the
+    // `java-library` plugin builds by default is never what goes in a server's plugins/ folder,
+    // so skip producing it and let build/libs/ hold exactly one file.
+    jar {
+        enabled = false
+    }
+
     build {
         dependsOn(shadowJar)
     }
@@ -82,6 +89,12 @@ tasks {
     }
 
     shadowJar {
+        // No classifier and no version in the name: re-running the build always produces the
+        // same path, so dropping it into a server's plugins/ folder replaces the old jar
+        // instead of accumulating a new version-numbered file every time.
+        archiveClassifier.set("")
+        archiveFileName.set("${rootProject.name}.jar")
+
         val libs = "fr.mathildeuh.sosstaff.libs"
         relocate("com.zaxxer.hikari", "$libs.hikari")
         relocate("org.incendo.cloud", "$libs.cloud")

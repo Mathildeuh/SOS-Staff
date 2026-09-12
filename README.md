@@ -34,7 +34,7 @@ both ways for as long as the ticket stays open.
 
 ## Installation
 
-1. Drop the built jar (`SOS-Staff-<version>-all.jar` from `build/libs/`, or a release download)
+1. Drop the built jar (`SOS-Staff.jar` from `build/libs/`, or a release download)
    into your server's `plugins/` folder and start the server once to generate `config.yml`.
 2. Set your bot token as an environment variable rather than writing it into `config.yml`:
    ```
@@ -95,7 +95,7 @@ None of these are required; each is only activated if the corresponding plugin i
 ./gradlew build
 ```
 
-produces `build/libs/SOS-Staff-<version>-all.jar` (the shaded jar to actually deploy) after
+produces `build/libs/SOS-Staff.jar` (the only jar it builds, ready to deploy) after
 running the full JUnit/MockBukkit test suite, including a check that all five `lang/*.yml` files
 define exactly the same keys as the `en_US` pivot.
 
