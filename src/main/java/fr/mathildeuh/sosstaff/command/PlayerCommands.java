@@ -97,7 +97,7 @@ public final class PlayerCommands {
 
         boolean bypass = player.hasPermission(configManager.antiSpamBypassPermission());
         creationCoordinator.create(player.getUniqueId(), player.getName(), category, TicketPriority.MEDIUM, bypass, null)
-                .thenAccept(result -> runOnMainThread(() -> handleCreationResult(player, result)))
+                .thenAccept(result -> runOnPlayerThread(player, () -> handleCreationResult(player, result)))
                 .exceptionally(throwable -> logFailure(player, "create a ticket", throwable));
     }
 
@@ -131,7 +131,7 @@ public final class PlayerCommands {
         ticketService.findActiveTicket(player.getUniqueId())
                 .thenAccept(active -> {
                     if (active.isEmpty()) {
-                        runOnMainThread(() -> send(player, noneActiveMessage, Map.of()));
+                        runOnPlayerThread(player, () -> send(player, noneActiveMessage, Map.of()));
                         return;
                     }
                     String effectiveReason = reason.isBlank() ? "Closed by the player" : reason;
@@ -149,13 +149,13 @@ public final class PlayerCommands {
         }
         ticketService.close(ticket.id(), reason).thenAccept(closed -> {
             sessionManager.closeByTicketId(closed.id());
-            runOnMainThread(() -> send(player, successMessage, Map.of("id", String.valueOf(closed.id()))));
+            runOnPlayerThread(player, () -> send(player, successMessage, Map.of("id", String.valueOf(closed.id()))));
         }).exceptionally(throwable -> logFailure(player, "close your ticket", throwable));
     }
 
     private void sendStatus(Player player) {
         ticketService.findActiveTicket(player.getUniqueId())
-                .thenAccept(active -> runOnMainThread(() -> {
+                .thenAccept(active -> runOnPlayerThread(player, () -> {
                     if (active.isEmpty()) {
                         send(player, Message.TICKET_STATUS_NONE, Map.of());
                         return;
@@ -171,7 +171,7 @@ public final class PlayerCommands {
 
     private void sendHistory(Player player) {
         ticketService.findHistory(player.getUniqueId())
-                .thenAccept(history -> runOnMainThread(() -> {
+                .thenAccept(history -> runOnPlayerThread(player, () -> {
                     if (history.isEmpty()) {
                         send(player, Message.TICKET_LIST_EMPTY, Map.of());
                         return;
@@ -188,12 +188,12 @@ public final class PlayerCommands {
 
     private Void logFailure(Player player, String action, Throwable throwable) {
         plugin.getLogger().severe("Failed to " + action + " for " + player.getUniqueId() + ": " + throwable);
-        runOnMainThread(() -> send(player, Message.GENERAL_ERROR_GENERIC, Map.of("error", String.valueOf(throwable.getMessage()))));
+        runOnPlayerThread(player, () -> send(player, Message.GENERAL_ERROR_GENERIC, Map.of("error", String.valueOf(throwable.getMessage()))));
         return null;
     }
 
-    private void runOnMainThread(Runnable runnable) {
-        plugin.getServer().getScheduler().runTask(plugin, runnable);
+    private void runOnPlayerThread(Player player, Runnable runnable) {
+        player.getScheduler().run(plugin, scheduledTask -> runnable.run(), null);
     }
 
     private void send(Player player, Message message, Map<String, String> placeholders) {

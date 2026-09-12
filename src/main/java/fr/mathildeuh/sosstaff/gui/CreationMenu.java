@@ -124,13 +124,13 @@ public final class CreationMenu {
 
         if (configManager.creationUi() == CreationUi.GUI) {
             anvilInputGui.open(player, miniMessage.deserialize(prompt),
-                    text -> Bukkit.getScheduler().runTask(plugin, () -> createTicket(player, category.id(), text)));
+                    text -> player.getScheduler().run(plugin, scheduledTask -> createTicket(player, category.id(), text), null));
             return;
         }
 
         player.sendMessage(miniMessage.deserialize(prompt));
         pendingChatPrompts.await(player.getUniqueId(), category.id(),
-                text -> Bukkit.getScheduler().runTask(plugin, () -> createTicket(player, category.id(), text)));
+                text -> player.getScheduler().run(plugin, scheduledTask -> createTicket(player, category.id(), text), null));
     }
 
     private void createTicket(Player player, String categoryId, String initialMessage) {
@@ -141,7 +141,7 @@ public final class CreationMenu {
 
         boolean bypass = player.hasPermission(configManager.antiSpamBypassPermission());
         creationCoordinator.create(player.getUniqueId(), player.getName(), categoryId, TicketPriority.MEDIUM, bypass, initialMessage)
-                .thenAccept(result -> Bukkit.getScheduler().runTask(plugin, () -> notify(player, result)))
+                .thenAccept(result -> player.getScheduler().run(plugin, scheduledTask -> notify(player, result), null))
                 .exceptionally(throwable -> {
                     plugin.getLogger().severe("Failed to create a ticket for " + player.getUniqueId() + " from the GUI: " + throwable);
                     return null;

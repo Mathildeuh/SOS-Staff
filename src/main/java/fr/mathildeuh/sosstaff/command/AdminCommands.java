@@ -70,8 +70,8 @@ public final class AdminCommands {
     private void eraseGdprData(Player sender, String playerName) {
         OfflinePlayer target = Bukkit.getOfflinePlayer(playerName);
         gdprService.eraseAllDataFor(target.getUniqueId())
-                .thenAccept(count -> Bukkit.getScheduler().runTask(plugin, () ->
-                        send(sender, Message.ADMIN_GDPR_ERASED, Map.of("count", String.valueOf(count), "player", playerName))));
+                .thenAccept(count -> sender.getScheduler().run(plugin, scheduledTask ->
+                        send(sender, Message.ADMIN_GDPR_ERASED, Map.of("count", String.valueOf(count), "player", playerName)), null));
     }
 
     private void send(Player player, Message message, Map<String, String> placeholders) {

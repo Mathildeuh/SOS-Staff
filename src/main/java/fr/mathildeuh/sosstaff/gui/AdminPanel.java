@@ -66,7 +66,7 @@ public final class AdminPanel {
         CompletableFuture<List<Ticket>> ticketsFuture = ticketService.findPage(filterStatus, page, PAGE_SIZE);
 
         countFuture.thenCombine(ticketsFuture, Map::entry)
-                .thenAccept(data -> Bukkit.getScheduler().runTask(plugin, () -> render(staff, page, filterStatus, data)))
+                .thenAccept(data -> staff.getScheduler().run(plugin, scheduledTask -> render(staff, page, filterStatus, data), null))
                 .exceptionally(throwable -> {
                     plugin.getLogger().severe("Failed to load the admin panel: " + throwable);
                     return null;
@@ -111,7 +111,7 @@ public final class AdminPanel {
 
     void onTicketClicked(Player staff, long ticketId) {
         ticketService.findById(ticketId).thenAccept(ticketOpt -> ticketOpt.ifPresent(ticket ->
-                Bukkit.getScheduler().runTask(plugin, () -> attachAndTeleport(staff, ticket))));
+                staff.getScheduler().run(plugin, scheduledTask -> attachAndTeleport(staff, ticket), null)));
     }
 
     private void attachAndTeleport(Player staff, Ticket ticket) {
