@@ -6,8 +6,9 @@ both ways for as long as the ticket stays open.
 
 ## Features
 
-- **Two creation flows** - a preset list of common issues, free-form text (anvil GUI or chat
-  prompt), or both, configurable globally and per category.
+- **Fast or guided creation** - `/ticket <reason>` opens a ticket in one step, or `/ticket new`
+  walks through a category/preset panel with a chat prompt for free text, configurable globally
+  and per category.
 - **Anti-spam** - a configurable cap on open tickets per player and a cooldown after closing one.
 - **Bidirectional live chat** - a player's in-game messages relay instantly to their ticket's
   Discord channel via webhook (with their skin and name), and staff replies relay back in-game.
@@ -50,7 +51,8 @@ both ways for as long as the ticket stays open.
 | Command | Description | Permission |
 |---|---|---|
 | `/ticket` (aliases: `/support`, `/sos`) | Show your active ticket's status | - |
-| `/ticket new` | Open the ticket-creation menu | - |
+| `/ticket <reason>` | Create a ticket in one step, using the first configured category | - |
+| `/ticket new` | Open the category/preset creation panel | - |
 | `/ticket new <category>` | Create a ticket directly, no opening message | - |
 | `/ticket status` | Same as `/ticket` | - |
 | `/ticket list` | Show your ticket history | - |
