@@ -1,9 +1,29 @@
+import io.papermc.hangarpublishplugin.model.Platforms
 import java.time.Instant
 
 plugins {
     id("java-library")
     id("com.gradleup.shadow") version "9.6.1"
+    id("pl.allegro.tech.build.axion-release") version "1.21.3"
+    id("io.papermc.hangar-publish-plugin") version "0.1.4"
 }
+
+scmVersion {
+    tag {
+        prefix.set("v")
+    }
+    // release.yml decides the bump type from the Conventional Commits made since the last tag
+    // (feat -> minor, a breaking change -> major, anything else -> patch) and passes it through
+    // this environment variable, rather than trying to re-implement that classification here.
+    versionIncrementer({ context ->
+        when (System.getenv("RELEASE_BUMP")) {
+            "major" -> context.currentVersion.incrementMajorVersion()
+            "minor" -> context.currentVersion.incrementMinorVersion()
+            else -> context.currentVersion.incrementPatchVersion()
+        }
+    })
+}
+version = scmVersion.version
 
 repositories {
     mavenCentral()
@@ -101,6 +121,26 @@ tasks {
         }
         filesMatching("version.properties") {
             expand(mapOf("version" to buildVersion, "commitHash" to gitCommitHash, "buildDate" to buildDate))
+        }
+    }
+}
+
+hangarPublish {
+    publications.register("plugin") {
+        version.set(project.version as String)
+        channel.set("Release")
+        // Set by release.yml from the HANGAR_PROJECT_SLUG repository variable once this project
+        // has actually been created on hangar.papermc.io; "SOS-Staff" is just a local fallback.
+        id.set(System.getenv("HANGAR_PROJECT_SLUG") ?: "SOS-Staff")
+        apiKey.set(System.getenv("HANGAR_API_TOKEN"))
+
+        platforms {
+            register(Platforms.PAPER) {
+                jar.set(tasks.shadowJar.flatMap { it.archiveFile })
+                // The floor is Paper 26.2 itself (it requires Java 25 to even boot), not the
+                // wider 1.20-1.26 range originally targeted before that decision was made.
+                platformVersions.set(listOf("26.2"))
+            }
         }
     }
 }
