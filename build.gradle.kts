@@ -41,7 +41,7 @@ dependencies {
 
     implementation("com.zaxxer:HikariCP:7.1.0")
     implementation("org.xerial:sqlite-jdbc:3.53.4.0")
-    implementation("org.incendo:cloud-paper:2.0.0-beta.10")
+    implementation("org.incendo:cloud-paper:2.0.0")
     implementation("net.dv8tion:JDA:6.6.0") {
         exclude(module = "opus-java")
     }
