@@ -1,0 +1,117 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # Axion Release just increments whatever bump type it's told via the RELEASE_BUMP env var
+      # (see versionIncrementer in build.gradle.kts) - the actual Conventional Commits
+      # classification happens here, in plain, easily auditable shell, against every commit
+      # subject since the last tag (or the whole history, on the very first release).
+      - name: Determine version bump from commits since the last tag
+        id: bump
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          RANGE=$([ -n "$LAST_TAG" ] && echo "$LAST_TAG..HEAD" || echo "HEAD")
+          SUBJECTS=$(git log $RANGE --format=%s)
+          if echo "$SUBJECTS" | grep -qE '^[a-z]+(\([^)]*\))?!:' || git log $RANGE --format=%B | grep -q '^BREAKING CHANGE:'; then
+            echo "bump=major" >> "$GITHUB_OUTPUT"
+          elif echo "$SUBJECTS" | grep -qE '^feat(\([^)]*\))?:'; then
+            echo "bump=minor" >> "$GITHUB_OUTPUT"
+          else
+            echo "bump=patch" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and test
+        run: ./gradlew build --console=plain
+
+      - name: Tag the release
+        id: tag
+        env:
+          RELEASE_BUMP: ${{ steps.bump.outputs.bump }}
+        run: |
+          ./gradlew release --console=plain -Prelease.disableChecks -Prelease.pushTagsOnly \
+            -Prelease.customUsername=x-access-token -Prelease.customPassword=${{ secrets.GITHUB_TOKEN }}
+          NEW_TAG=$(git describe --tags --abbrev=0)
+          echo "tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
+          echo "version=${NEW_TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Rebuild the jar under the released version
+        run: ./gradlew shadowJar --console=plain
+
+      - name: Generate changelog for this release
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --latest --strip header
+        env:
+          OUTPUT: CHANGELOG.md
+          GITHUB_REPO: ${{ github.repository }}
+
+      - name: Compute jar checksum
+        id: checksum
+        run: |
+          JAR=$(find build/libs -iname "*-all.jar")
+          sha256sum "$JAR" | awk '{ print $1 }' > "$JAR.sha256"
+          echo "jar=$JAR" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: SOS-Staff ${{ steps.tag.outputs.version }}
+          body_path: CHANGELOG.md
+          files: |
+            ${{ steps.checksum.outputs.jar }}
+            ${{ steps.checksum.outputs.jar }}.sha256
+
+      - name: Publish to Modrinth
+        uses: Kira-NT/mc-publish@v3.3.1
+        with:
+          modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          files: build/libs/*-all.jar
+          changelog-file: CHANGELOG.md
+          version: ${{ steps.tag.outputs.version }}
+          loaders: paper
+          game-versions: '26.2'
+
+      - name: Publish to Hangar
+        env:
+          HANGAR_API_TOKEN: ${{ secrets.HANGAR_API_TOKEN }}
+          HANGAR_PROJECT_SLUG: ${{ vars.HANGAR_PROJECT_SLUG }}
+        run: ./gradlew publishPluginPublicationToHangar --console=plain
+
+      - name: Notify Discord
+        if: always()
+        run: |
+          curl -sf -X POST "${{ secrets.DISCORD_RELEASE_WEBHOOK }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\": \"🚀 SOS-Staff ${{ steps.tag.outputs.version }} has been released: https://github.com/${{ github.repository }}/releases/tag/${{ steps.tag.outputs.tag }}\"}"
+
+      - name: Remind about the SpigotMC listing
+        run: |
+          echo "### Manual step required" >> "$GITHUB_STEP_SUMMARY"
+          echo "SpigotMC has no publishing API - update the resource page for **${{ steps.tag.outputs.version }}** by hand." >> "$GITHUB_STEP_SUMMARY"
