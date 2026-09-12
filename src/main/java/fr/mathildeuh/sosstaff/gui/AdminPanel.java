@@ -157,7 +157,7 @@ public final class AdminPanel {
         Material wool = woolFor(status);
         ItemStack item = new ItemStack(wool);
         ItemMeta meta = item.getItemMeta();
-        String label = status == null ? langManager.get(Message.GUI_ADMIN_PANEL_FILTER_ALL, Map.of()) : status.name();
+        String label = status == null ? langManager.get(Message.GUI_ADMIN_PANEL_FILTER_ALL, Map.of()) : status.label();
         boolean active = currentFilter.equals(Optional.ofNullable(status));
         NamedTextColor color = active ? NamedTextColor.GREEN : NamedTextColor.GRAY;
         meta.displayName(Component.text((active ? "▶ " : "") + label, color)

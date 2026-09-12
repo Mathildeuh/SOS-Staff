@@ -50,7 +50,7 @@ gui:
   admin-panel:
     title: "<gradient:#5865F2:#FF5A36><bold>SOS-Staff Tickets</bold></gradient>"
     ticket-lore: "<gray>%category%</gray> <dark_gray>|</dark_gray> <white>%status%</white> <dark_gray>|</dark_gray> <yellow>%priority%</yellow>"
-    filter-all: "<color:#57F287>All tickets</color>"
+    filter-all: "All tickets"
 
 admin:
   attached-to-ticket: "You are now attached to ticket #%id% - your chat will relay to Discord."
