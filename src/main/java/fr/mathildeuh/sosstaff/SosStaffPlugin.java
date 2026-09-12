@@ -42,6 +42,7 @@ import fr.mathildeuh.sosstaff.ticket.TicketCreationCoordinator;
 import fr.mathildeuh.sosstaff.ticket.TicketMessageRepository;
 import fr.mathildeuh.sosstaff.ticket.TicketRepository;
 import fr.mathildeuh.sosstaff.ticket.TicketService;
+import fr.mathildeuh.sosstaff.util.MetricsCharts;
 import fr.mathildeuh.sosstaff.util.UpdateChecker;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.plugin.ServicePriority;
@@ -162,7 +163,7 @@ public final class SosStaffPlugin extends JavaPlugin {
         getServer().getOnlinePlayers().forEach(liveChatListener::reopenSessionIfNeeded);
 
         registerSoftDependIntegrations();
-        new Metrics(this, BSTATS_SERVICE_ID);
+        MetricsCharts.register(new Metrics(this, BSTATS_SERVICE_ID), configManager, discordGateway);
         if (configManager.updateCheckerEnabled()) {
             new UpdateChecker(getLogger()).checkAsync();
         }
