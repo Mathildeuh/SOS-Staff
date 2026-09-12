@@ -6,6 +6,7 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.exceptions.InvalidTokenException;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
@@ -38,11 +39,27 @@ public final class DiscordGateway {
         }
     }
 
+    /**
+     * Blocks briefly (plugin disable, not normal runtime, so this is fine) until JDA's own
+     * threads actually stop, instead of just signalling shutdown and returning immediately.
+     * Without this wait, a background JDA thread can still be mid-reconnect when Bukkit closes
+     * this plugin's classloader right after onDisable() returns, throwing a confusing
+     * "zip file closed" error instead of shutting down cleanly.
+     */
     public void stop() {
-        if (jda != null) {
-            jda.shutdown();
-            jda = null;
+        if (jda == null) {
+            return;
         }
+        jda.shutdown();
+        try {
+            if (!jda.awaitShutdown(Duration.ofSeconds(5))) {
+                jda.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            jda.shutdownNow();
+        }
+        jda = null;
     }
 
     public boolean isReady() {
