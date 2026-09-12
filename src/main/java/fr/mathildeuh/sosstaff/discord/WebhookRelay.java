@@ -6,6 +6,7 @@ import net.dv8tion.jda.api.entities.IncomingWebhookClient;
 import net.dv8tion.jda.api.entities.Webhook;
 import net.dv8tion.jda.api.entities.WebhookClient;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.requests.ErrorResponse;
 
 import java.util.Map;
 import java.util.Optional;
@@ -35,6 +36,17 @@ public final class WebhookRelay {
     }
 
     public CompletableFuture<Void> relayPlayerMessage(String discordChannelId, UUID playerUuid, String playerName, String content) {
+        return relayPlayerMessage(discordChannelId, playerUuid, playerName, content, true);
+    }
+
+    /**
+     * A cached webhook can go stale if it was deleted on Discord's side after we cached it (the
+     * channel was recreated, someone cleaned up webhooks manually, ...) - the first "Unknown
+     * Webhook" failure evicts the cache entry and retries once against a freshly
+     * fetched-or-recreated webhook, rather than failing every message for that channel forever.
+     */
+    private CompletableFuture<Void> relayPlayerMessage(String discordChannelId, UUID playerUuid, String playerName,
+                                                         String content, boolean allowRetryOnStaleWebhook) {
         return webhookClientFor(discordChannelId).thenCompose(clientOpt -> {
             if (clientOpt.isEmpty()) {
                 return CompletableFuture.completedFuture(null);
@@ -43,7 +55,21 @@ public final class WebhookRelay {
             clientOpt.get().sendMessage(content)
                     .setUsername(playerName)
                     .setAvatarUrl(SkinRenderer.avatarUrl(playerUuid))
-                    .queue(ignored -> future.complete(null), future::completeExceptionally);
+                    .queue(ignored -> future.complete(null), throwable -> {
+                        if (allowRetryOnStaleWebhook && ErrorResponse.UNKNOWN_WEBHOOK.test(throwable)) {
+                            clientsByChannelId.remove(discordChannelId);
+                            relayPlayerMessage(discordChannelId, playerUuid, playerName, content, false)
+                                    .whenComplete((ignored2, retryError) -> {
+                                        if (retryError != null) {
+                                            future.completeExceptionally(retryError);
+                                        } else {
+                                            future.complete(null);
+                                        }
+                                    });
+                        } else {
+                            future.completeExceptionally(throwable);
+                        }
+                    });
             return future;
         });
     }
@@ -67,8 +93,11 @@ public final class WebhookRelay {
 
         CompletableFuture<Optional<IncomingWebhookClient>> future = new CompletableFuture<>();
         channel.retrieveWebhooks().queue(webhooks -> {
+            // Discord only ever exposes a webhook's token to the bot that created it - a
+            // same-named webhook this bot can't see the token for is unusable and treated as
+            // absent, so a fresh (token-bearing) one gets created instead.
             Webhook existing = webhooks.stream()
-                    .filter(webhook -> WEBHOOK_NAME.equals(webhook.getName()))
+                    .filter(webhook -> WEBHOOK_NAME.equals(webhook.getName()) && webhook.getToken() != null)
                     .findFirst()
                     .orElse(null);
             if (existing != null) {
