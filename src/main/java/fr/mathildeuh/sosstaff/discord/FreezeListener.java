@@ -20,9 +20,6 @@ public final class FreezeListener implements Listener {
         }
         Location from = event.getFrom();
         Location to = event.getTo();
-        if (to == null) {
-            return;
-        }
         if (from.getX() != to.getX() || from.getY() != to.getY() || from.getZ() != to.getZ()) {
             event.setCancelled(true);
         }
