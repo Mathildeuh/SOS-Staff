@@ -109,7 +109,7 @@ public final class ChannelOrchestrator {
         buttonRows.addAll(EmbedFactory.actionButtonRows(discordConfig.actionButtons(), ticket.id(), targetOnline));
 
         var onCreate = discordConfig.mentions().onCreate();
-        String roleMentions = onCreate.roleIds().stream().map(id -> "<@&" + id + ">").collect(Collectors.joining(" "));
+        String roleMentions = buildRoleMentions(onCreate.roleIds(), category.pingRoleId());
         String pingMessage = (roleMentions.isBlank() ? "" : roleMentions + " ")
                 + onCreate.message().replace("%player%", playerName).replace("%category%", category.displayName());
 
@@ -121,6 +121,18 @@ public final class ChannelOrchestrator {
 
     static String formatChannelName(String format, Ticket ticket, String playerName) {
         return format.replace("%id%", String.valueOf(ticket.id())).replace("%player%", playerName);
+    }
+
+    /**
+     * The global on-create roles ping every ticket; a category's own ping-role (if it sets one)
+     * pings in addition to those, not instead of them.
+     */
+    static String buildRoleMentions(List<String> globalRoleIds, String categoryPingRoleId) {
+        List<String> roleIds = new ArrayList<>(globalRoleIds);
+        if (categoryPingRoleId != null && !categoryPingRoleId.isBlank()) {
+            roleIds.add(categoryPingRoleId);
+        }
+        return roleIds.stream().map(id -> "<@&" + id + ">").collect(Collectors.joining(" "));
     }
 
     static String formatTopic(String format, Ticket ticket) {

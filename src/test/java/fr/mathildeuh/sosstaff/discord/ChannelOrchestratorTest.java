@@ -6,6 +6,7 @@ import fr.mathildeuh.sosstaff.ticket.TicketStatus;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -28,5 +29,26 @@ class ChannelOrchestratorTest {
         String topic = ChannelOrchestrator.formatTopic("Ticket #%id% - %category% - Priority: %priority%", TICKET);
 
         assertEquals("Ticket #42 - bug - Priority: HIGH", topic);
+    }
+
+    @Test
+    void buildsMentionsFromOnlyTheGlobalRolesWhenTheCategoryHasNoPingRole() {
+        String mentions = ChannelOrchestrator.buildRoleMentions(List.of("111", "222"), null);
+
+        assertEquals("<@&111> <@&222>", mentions);
+    }
+
+    @Test
+    void appendsTheCategorysPingRoleAfterTheGlobalRoles() {
+        String mentions = ChannelOrchestrator.buildRoleMentions(List.of("111"), "999");
+
+        assertEquals("<@&111> <@&999>", mentions);
+    }
+
+    @Test
+    void aBlankCategoryPingRoleIsIgnored() {
+        String mentions = ChannelOrchestrator.buildRoleMentions(List.of("111"), " ");
+
+        assertEquals("<@&111>", mentions);
     }
 }
