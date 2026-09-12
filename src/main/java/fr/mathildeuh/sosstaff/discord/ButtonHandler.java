@@ -43,11 +43,13 @@ public final class ButtonHandler {
     private final LiveChatSessionManager sessionManager;
     private final EscalationScheduler escalationScheduler;
     private final LangManager langManager;
+    private final ChannelOrchestrator channelOrchestrator;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
     public ButtonHandler(JavaPlugin plugin, TicketService ticketService, ConfigManager configManager,
                           TicketMessageRepository messageRepository, LiveChatSessionManager sessionManager,
-                          EscalationScheduler escalationScheduler, LangManager langManager) {
+                          EscalationScheduler escalationScheduler, LangManager langManager,
+                          ChannelOrchestrator channelOrchestrator) {
         this.plugin = plugin;
         this.ticketService = ticketService;
         this.configManager = configManager;
@@ -55,6 +57,7 @@ public final class ButtonHandler {
         this.sessionManager = sessionManager;
         this.langManager = langManager;
         this.escalationScheduler = escalationScheduler;
+        this.channelOrchestrator = channelOrchestrator;
     }
 
     public void handle(ButtonInteractionEvent event, String action, long ticketId) {
@@ -72,18 +75,31 @@ public final class ButtonHandler {
     private void handleClaim(ButtonInteractionEvent event, long ticketId) {
         event.deferEdit().queue();
         String discordUserId = event.getUser().getId();
+        String staffName = event.getMember() != null ? event.getMember().getEffectiveName() : event.getUser().getName();
         ticketService.findById(ticketId).thenAccept(ticketOpt -> ticketOpt.ifPresent(ticket ->
                 plugin.getServer().getGlobalRegionScheduler().run(plugin,
-                        scheduledTask -> claimIfNotCancelled(event, ticket, discordUserId))));
+                        scheduledTask -> claimIfNotCancelled(event, ticket, discordUserId, staffName))));
     }
 
-    private void claimIfNotCancelled(ButtonInteractionEvent event, Ticket ticket, String discordUserId) {
+    private void claimIfNotCancelled(ButtonInteractionEvent event, Ticket ticket, String discordUserId, String staffName) {
         TicketClaimEvent claimEvent = new TicketClaimEvent(ticket, discordUserId);
         plugin.getServer().getPluginManager().callEvent(claimEvent);
         if (claimEvent.isCancelled()) {
             return;
         }
-        ticketService.claim(ticket.id(), discordUserId).thenAccept(claimed -> updateEmbed(event, claimed));
+        ticketService.claim(ticket.id(), discordUserId).thenAccept(claimed -> {
+            notifyPlayerOfClaim(claimed, staffName);
+            updateEmbed(event, claimed);
+        });
+    }
+
+    private void notifyPlayerOfClaim(Ticket ticket, String staffName) {
+        Player player = plugin.getServer().getPlayer(ticket.playerUuid());
+        if (player == null) {
+            return;
+        }
+        player.getScheduler().run(plugin, scheduledTask -> player.sendMessage(miniMessage.deserialize(
+                langManager.get(Message.TICKET_CLAIM_NOTIFY, Map.of("id", String.valueOf(ticket.id()), "staff", staffName)))), null);
     }
 
     private void handleClose(ButtonInteractionEvent event, long ticketId) {
@@ -101,7 +117,10 @@ public final class ButtonHandler {
         }
         ticketService.close(ticket.id(), reason).thenAccept(closed -> {
             sessionManager.closeByTicketId(closed.id());
+            // Update the embed first: on-close may delete or move this very channel, and doing it
+            // before the edit risks the edit landing on a channel that's already gone.
             updateEmbed(event, closed);
+            channelOrchestrator.handleTicketClosed(closed);
         });
     }
 
@@ -139,8 +158,21 @@ public final class ButtonHandler {
         event.deferEdit().queue();
         ticketService.findById(ticketId).thenAccept(ticketOpt -> ticketOpt.ifPresent(ticket -> {
             TicketPriority next = nextPriority(ticket.priority());
-            ticketService.updatePriority(ticketId, next).thenAccept(updated -> updateEmbed(event, updated));
+            ticketService.updatePriority(ticketId, next).thenAccept(updated -> {
+                notifyPlayerOfPriorityChange(updated);
+                updateEmbed(event, updated);
+            });
         }));
+    }
+
+    private void notifyPlayerOfPriorityChange(Ticket ticket) {
+        Player player = plugin.getServer().getPlayer(ticket.playerUuid());
+        if (player == null) {
+            return;
+        }
+        player.getScheduler().run(plugin, scheduledTask -> player.sendMessage(miniMessage.deserialize(
+                langManager.get(Message.TICKET_PRIORITY_NOTIFY,
+                        Map.of("id", String.valueOf(ticket.id()), "priority", ticket.priority().label())))), null);
     }
 
     private void handleTranscript(ButtonInteractionEvent event, long ticketId) {

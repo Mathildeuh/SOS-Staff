@@ -21,10 +21,10 @@ ticket:
       by-plugin: "Создание тикета было заблокировано другим плагином сервера."
   status:
     none: "У вас нет активного тикета."
-    active: "Тикет #%id% - статус: %status%, приоритет: %priority%."
+    active: "<gold>Тикет #%id%</gold> - статус: <color:#5865F2>%status%</color>, приоритет: <color:#FF5A36>%priority%</color>."
   list:
     empty: "У вас нет истории тикетов."
-    entry: "#%id% [%category%] %status%"
+    entry: "<gold>#%id%</gold> <gray>[%category%]</gray> <color:#5865F2>%status%</color>"
   close:
     none-active: "У вас нет активного тикета для закрытия."
     success: "<color:#ED4245>Тикет #%id% закрыт.</color>"
@@ -33,6 +33,10 @@ ticket:
     success: "<color:#ED4245>Тикет #%id% отменён.</color>"
   reopen:
     notify: "<gradient:#FF5A36:#5865F2>Ваш тикет #%id% был повторно открыт персоналом.</gradient>"
+  claim:
+    notify: "<color:#57F287>%staff%</color> теперь занимается вашим тикетом #%id%."
+  priority:
+    notify: "Приоритет вашего тикета #%id% теперь <color:#FF5A36>%priority%</color>."
 
 chat:
   staff-reply: "<color:#5865F2>[Поддержка]</color> <white>%author%</white>: %message%"

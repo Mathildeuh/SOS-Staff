@@ -21,10 +21,10 @@ ticket:
       by-plugin: "Die Ticketerstellung wurde von einem Server-Plugin blockiert."
   status:
     none: "Du hast kein aktives Ticket."
-    active: "Ticket #%id% - Status: %status%, Priorität: %priority%."
+    active: "<gold>Ticket #%id%</gold> - Status: <color:#5865F2>%status%</color>, Priorität: <color:#FF5A36>%priority%</color>."
   list:
     empty: "Du hast keinen Ticketverlauf."
-    entry: "#%id% [%category%] %status%"
+    entry: "<gold>#%id%</gold> <gray>[%category%]</gray> <color:#5865F2>%status%</color>"
   close:
     none-active: "Du hast kein aktives Ticket zum Schließen."
     success: "<color:#ED4245>Ticket #%id% geschlossen.</color>"
@@ -33,6 +33,10 @@ ticket:
     success: "<color:#ED4245>Ticket #%id% abgebrochen.</color>"
   reopen:
     notify: "<gradient:#FF5A36:#5865F2>Dein Ticket #%id% wurde vom Team wieder geöffnet.</gradient>"
+  claim:
+    notify: "<color:#57F287>%staff%</color> kümmert sich jetzt um dein Ticket #%id%."
+  priority:
+    notify: "Die Priorität deines Tickets #%id% ist jetzt <color:#FF5A36>%priority%</color>."
 
 chat:
   staff-reply: "<color:#5865F2>[Support]</color> <white>%author%</white>: %message%"

@@ -49,7 +49,7 @@ public final class ChannelOrchestrator {
         Guild guild = guildOpt.get();
         DiscordConfig discordConfig = configManager.discord();
 
-        return findOrCreateCategory(guild, discordConfig.category())
+        return findOrCreateCategory(guild, discordConfig.category().name(), discordConfig.category().autoCreate())
                 .thenCompose(category -> createChannel(guild, category, ticket, playerName, discordConfig))
                 .exceptionally(throwable -> {
                     logger.severe("Failed to create the Discord channel for ticket #" + ticket.id() + ": " + throwable);
@@ -57,18 +57,90 @@ public final class ChannelOrchestrator {
                 });
     }
 
-    private CompletableFuture<Category> findOrCreateCategory(Guild guild, DiscordConfig.Category categoryConfig) {
-        List<Category> existing = guild.getCategoryCache().getElementsByName(categoryConfig.name(), true);
+    /**
+     * Applies discord.on-close once a ticket is closed: DELETE removes the channel outright,
+     * ARCHIVE moves it into the archived-category-name category (created on demand, same as the
+     * main ticket category) and, if lock-channel is set, strips MESSAGE_SEND from the staff roles
+     * so the transcript stays visible but read-only.
+     */
+    public CompletableFuture<Void> handleTicketClosed(Ticket ticket) {
+        if (ticket.discordChannelId() == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+        Optional<Guild> guildOpt = gateway.primaryGuild();
+        if (guildOpt.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
+        Guild guild = guildOpt.get();
+        TextChannel channel = guild.getTextChannelById(ticket.discordChannelId());
+        if (channel == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        DiscordConfig.OnClose onClose = configManager.discord().onClose();
+        CompletableFuture<Void> future = onClose.action() == DiscordConfig.OnCloseAction.DELETE
+                ? deleteChannel(channel)
+                : archiveChannel(guild, channel, onClose.lockChannel());
+        return future.exceptionally(throwable -> {
+            logger.warning("Failed to apply discord.on-close to channel for ticket #" + ticket.id() + ": " + throwable);
+            return null;
+        });
+    }
+
+    /** Used by the daily auto-delete-after-days sweep, working from a raw stored channel id. */
+    public CompletableFuture<Void> deleteChannelById(String channelId) {
+        Optional<Guild> guildOpt = gateway.primaryGuild();
+        if (guildOpt.isEmpty()) {
+            return CompletableFuture.completedFuture(null);
+        }
+        TextChannel channel = guildOpt.get().getTextChannelById(channelId);
+        if (channel == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+        return deleteChannel(channel);
+    }
+
+    private CompletableFuture<Void> deleteChannel(TextChannel channel) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        channel.delete().queue(ignored -> future.complete(null), future::completeExceptionally);
+        return future;
+    }
+
+    private CompletableFuture<Void> archiveChannel(Guild guild, TextChannel channel, boolean lockChannel) {
+        String archivedCategoryName = configManager.discord().category().archivedCategoryName();
+        return findOrCreateCategory(guild, archivedCategoryName, true).thenCompose(archivedCategory -> {
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            // Deliberately not synced to the archived category's own permissions - it has none of
+            // its own, and syncing would wipe this channel's existing hide-from-everyone/staff-role
+            // overrides, making a "private" archived ticket visible to the whole guild.
+            var manager = channel.getManager().setParent(archivedCategory);
+            if (lockChannel) {
+                for (String roleId : configManager.discord().permissions().staffRoleIds()) {
+                    try {
+                        manager = manager.putRolePermissionOverride(Long.parseLong(roleId),
+                                List.of(Permission.VIEW_CHANNEL, Permission.MESSAGE_HISTORY), List.of(Permission.MESSAGE_SEND));
+                    } catch (NumberFormatException e) {
+                        logger.warning("discord.permissions.staff-roles contains an invalid role id: '" + roleId + "'");
+                    }
+                }
+            }
+            manager.queue(ignored -> future.complete(null), future::completeExceptionally);
+            return future;
+        });
+    }
+
+    private CompletableFuture<Category> findOrCreateCategory(Guild guild, String categoryName, boolean autoCreate) {
+        List<Category> existing = guild.getCategoryCache().getElementsByName(categoryName, true);
         if (!existing.isEmpty()) {
             return CompletableFuture.completedFuture(existing.getFirst());
         }
-        if (!categoryConfig.autoCreate()) {
+        if (!autoCreate) {
             return CompletableFuture.failedFuture(new IllegalStateException(
-                    "discord.category '" + categoryConfig.name() + "' does not exist and auto-create is disabled"));
+                    "discord category '" + categoryName + "' does not exist and auto-create is disabled"));
         }
 
         CompletableFuture<Category> future = new CompletableFuture<>();
-        guild.createCategory(categoryConfig.name()).queue(future::complete, future::completeExceptionally);
+        guild.createCategory(categoryName).queue(future::complete, future::completeExceptionally);
         return future;
     }
 
@@ -138,6 +210,6 @@ public final class ChannelOrchestrator {
     static String formatTopic(String format, Ticket ticket) {
         return format.replace("%id%", String.valueOf(ticket.id()))
                 .replace("%category%", ticket.category())
-                .replace("%priority%", ticket.priority().name());
+                .replace("%priority%", ticket.priority().label());
     }
 }

@@ -146,7 +146,7 @@ public final class AdminPanel {
         CategoryConfig category = configManager.categories().get(ticket.category());
         String categoryName = category != null ? category.displayName() : ticket.category();
         String lore = langManager.get(Message.GUI_ADMIN_PANEL_TICKET_LORE, Map.of(
-                "category", categoryName, "status", ticket.status().name(), "priority", ticket.priority().name()));
+                "category", categoryName, "status", ticket.status().label(), "priority", ticket.priority().label()));
         meta.lore(List.of(miniMessage.deserialize(lore)));
 
         item.setItemMeta(meta);

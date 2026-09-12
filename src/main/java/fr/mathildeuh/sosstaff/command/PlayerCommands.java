@@ -3,6 +3,7 @@ package fr.mathildeuh.sosstaff.command;
 import fr.mathildeuh.sosstaff.api.event.TicketCloseEvent;
 import fr.mathildeuh.sosstaff.api.event.TicketCreateEvent;
 import fr.mathildeuh.sosstaff.config.ConfigManager;
+import fr.mathildeuh.sosstaff.discord.ChannelOrchestrator;
 import fr.mathildeuh.sosstaff.gui.CreationMenu;
 import fr.mathildeuh.sosstaff.lang.LangManager;
 import fr.mathildeuh.sosstaff.lang.Message;
@@ -33,11 +34,13 @@ public final class PlayerCommands {
     private final LiveChatSessionManager sessionManager;
     private final TicketCreationCoordinator creationCoordinator;
     private final CreationMenu creationMenu;
+    private final ChannelOrchestrator channelOrchestrator;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
     public PlayerCommands(JavaPlugin plugin, TicketService ticketService, ConfigManager configManager,
                            LangManager langManager, LiveChatSessionManager sessionManager,
-                           TicketCreationCoordinator creationCoordinator, CreationMenu creationMenu) {
+                           TicketCreationCoordinator creationCoordinator, CreationMenu creationMenu,
+                           ChannelOrchestrator channelOrchestrator) {
         this.plugin = plugin;
         this.ticketService = ticketService;
         this.configManager = configManager;
@@ -45,6 +48,7 @@ public final class PlayerCommands {
         this.sessionManager = sessionManager;
         this.creationCoordinator = creationCoordinator;
         this.creationMenu = creationMenu;
+        this.channelOrchestrator = channelOrchestrator;
     }
 
     public void register(PaperCommandManager<Source> commandManager) {
@@ -129,7 +133,7 @@ public final class PlayerCommands {
     private void handleCreationResult(Player player, TicketCreationResult result) {
         switch (result) {
             case TicketCreationResult.Created created ->
-                    sendActionBar(player, Message.TICKET_CREATE_SUCCESS, Map.of("id", String.valueOf(created.ticket().id())));
+                    send(player, Message.TICKET_CREATE_SUCCESS, Map.of("id", String.valueOf(created.ticket().id())));
             case TicketCreationResult.RejectedTooManyOpenTickets rejected ->
                     send(player, Message.TICKET_CREATE_REJECTED_TOO_MANY_OPEN,
                             Map.of("id", String.valueOf(rejected.existingTicket().id())));
@@ -161,6 +165,7 @@ public final class PlayerCommands {
         }
         ticketService.close(ticket.id(), reason).thenAccept(closed -> {
             sessionManager.closeByTicketId(closed.id());
+            channelOrchestrator.handleTicketClosed(closed);
             runOnPlayerThread(player, () -> sendActionBar(player, successMessage, Map.of("id", String.valueOf(closed.id()))));
         }).exceptionally(throwable -> logFailure(player, "close your ticket", throwable));
     }
@@ -175,8 +180,8 @@ public final class PlayerCommands {
                     Ticket ticket = active.get();
                     send(player, Message.TICKET_STATUS_ACTIVE, Map.of(
                             "id", String.valueOf(ticket.id()),
-                            "status", ticket.status().name(),
-                            "priority", ticket.priority().name()));
+                            "status", ticket.status().label(),
+                            "priority", ticket.priority().label()));
                 }))
                 .exceptionally(throwable -> logFailure(player, "read your ticket status", throwable));
     }
@@ -192,7 +197,7 @@ public final class PlayerCommands {
                         send(player, Message.TICKET_LIST_ENTRY, Map.of(
                                 "id", String.valueOf(ticket.id()),
                                 "category", ticket.category(),
-                                "status", ticket.status().name()));
+                                "status", ticket.status().label()));
                     }
                 }))
                 .exceptionally(throwable -> logFailure(player, "read your ticket history", throwable));
@@ -213,9 +218,9 @@ public final class PlayerCommands {
     }
 
     /**
-     * Short, transient confirmations (a ticket was created/closed/cancelled) go to the action
-     * bar instead of chat, per the project's own art-direction call - they'd otherwise get lost
-     * in scrollback within seconds anyway, and this keeps chat free of plugin noise.
+     * A ticket being closed/cancelled is transient feedback for an action the player just took
+     * themselves, so it goes to the action bar. Ticket creation stays in chat instead (see
+     * handleCreationResult) since it's the one confirmation the player may want to scroll back to.
      */
     private void sendActionBar(Player player, Message message, Map<String, String> placeholders) {
         player.sendActionBar(miniMessage.deserialize(langManager.get(message, placeholders)));

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 public final class TicketService {
 
@@ -117,6 +118,16 @@ public final class TicketService {
 
     public CompletableFuture<Integer> countAll(Optional<TicketStatus> statusFilter) {
         return repository.countAll(statusFilter);
+    }
+
+    /**
+     * All CLOSED and ARCHIVED tickets, for the daily discord.on-close.auto-delete-after-days
+     * sweep - not cached, since it only runs once a day and scans the whole closed backlog.
+     */
+    public CompletableFuture<List<Ticket>> findClosedAndArchivedTickets() {
+        return repository.findByStatus(TicketStatus.CLOSED).thenCombine(
+                repository.findByStatus(TicketStatus.ARCHIVED),
+                (closed, archived) -> Stream.concat(closed.stream(), archived.stream()).toList());
     }
 
     public CompletableFuture<List<Ticket>> findTicketsNeedingEscalation() {

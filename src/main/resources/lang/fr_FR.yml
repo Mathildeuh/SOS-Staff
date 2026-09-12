@@ -21,10 +21,10 @@ ticket:
       by-plugin: "La création du ticket a été bloquée par un plugin du serveur."
   status:
     none: "Vous n'avez pas de ticket actif."
-    active: "Ticket #%id% - statut: %status%, priorité: %priority%."
+    active: "<gold>Ticket #%id%</gold> - statut: <color:#5865F2>%status%</color>, priorité: <color:#FF5A36>%priority%</color>."
   list:
     empty: "Vous n'avez aucun historique de ticket."
-    entry: "#%id% [%category%] %status%"
+    entry: "<gold>#%id%</gold> <gray>[%category%]</gray> <color:#5865F2>%status%</color>"
   close:
     none-active: "Vous n'avez pas de ticket actif à fermer."
     success: "<color:#ED4245>Ticket #%id% fermé.</color>"
@@ -33,6 +33,10 @@ ticket:
     success: "<color:#ED4245>Ticket #%id% annulé.</color>"
   reopen:
     notify: "<gradient:#FF5A36:#5865F2>Votre ticket #%id% a été rouvert par le staff.</gradient>"
+  claim:
+    notify: "<color:#57F287>%staff%</color> s'occupe de votre ticket #%id%."
+  priority:
+    notify: "La priorité de votre ticket #%id% est maintenant <color:#FF5A36>%priority%</color>."
 
 chat:
   staff-reply: "<color:#5865F2>[Support]</color> <white>%author%</white>: %message%"

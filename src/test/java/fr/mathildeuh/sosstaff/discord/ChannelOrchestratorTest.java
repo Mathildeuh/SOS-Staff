@@ -28,7 +28,7 @@ class ChannelOrchestratorTest {
     void formatsThePlaceholdersInTheTopicFormat() {
         String topic = ChannelOrchestrator.formatTopic("Ticket #%id% - %category% - Priority: %priority%", TICKET);
 
-        assertEquals("Ticket #42 - bug - Priority: HIGH", topic);
+        assertEquals("Ticket #42 - bug - Priority: High", topic);
     }
 
     @Test

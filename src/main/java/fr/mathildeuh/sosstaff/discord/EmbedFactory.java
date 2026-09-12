@@ -66,8 +66,8 @@ public final class EmbedFactory {
         builder.setColor(parseColor(category.colorHex()));
         builder.setThumbnail(SkinRenderer.avatarUrl(ticket.playerUuid()));
         builder.addField("👤 Player", playerName, true);
-        builder.addField("📌 Status", ticket.status().name(), true);
-        builder.addField("🔥 Priority", ticket.priority().name(), true);
+        builder.addField("📌 Status", ticket.status().label(), true);
+        builder.addField("🔥 Priority", ticket.priority().label(), true);
         if (ticket.claimedBy() != null) {
             builder.addField("🙋 Claimed by", "<@" + ticket.claimedBy() + ">", true);
         }

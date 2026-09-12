@@ -113,9 +113,10 @@ public final class SosStaffPlugin extends JavaPlugin {
         InternalActionRegistry internalActionRegistry = new InternalActionRegistry(frozenPlayers);
 
         discordGateway = new DiscordGateway(getLogger());
+        ChannelOrchestrator channelOrchestrator = new ChannelOrchestrator(discordGateway, configManager, getLogger());
         EscalationScheduler escalationScheduler = new EscalationScheduler(this, ticketService, configManager, discordGateway, getLogger());
         ButtonHandler buttonHandler = new ButtonHandler(
-                this, ticketService, configManager, ticketMessageRepository, sessionManager, escalationScheduler, langManager);
+                this, ticketService, configManager, ticketMessageRepository, sessionManager, escalationScheduler, langManager, channelOrchestrator);
         ActionButtonHandler actionButtonHandler = new ActionButtonHandler(this, configManager, ticketService, internalActionRegistry);
 
         DiscordMessageListener discordMessageListener =
@@ -125,14 +126,13 @@ public final class SosStaffPlugin extends JavaPlugin {
         escalationScheduler.start();
 
         GdprService gdprService = new GdprService(ticketRepository, ticketMessageRepository, configManager);
-        new RetentionScheduler(this, gdprService, getLogger()).start();
+        new RetentionScheduler(this, gdprService, ticketService, channelOrchestrator, configManager, getLogger()).start();
 
         ReloadService reloadService = new ReloadService(configManager, langManager, newToken -> {
             discordGateway.stop();
             discordGateway.start(newToken, discordMessageListener, discordInteractionListener);
         });
 
-        ChannelOrchestrator channelOrchestrator = new ChannelOrchestrator(discordGateway, configManager, getLogger());
         WebhookRelay webhookRelay = new WebhookRelay(discordGateway, getLogger());
         TicketCreationCoordinator creationCoordinator =
                 new TicketCreationCoordinator(ticketService, channelOrchestrator, sessionManager, ticketMessageRepository, webhookRelay);
@@ -153,7 +153,7 @@ public final class SosStaffPlugin extends JavaPlugin {
                 .builder(PaperSimpleSenderMapper.simpleSenderMapper())
                 .executionCoordinator(ExecutionCoordinator.simpleCoordinator())
                 .buildOnEnable(this);
-        new PlayerCommands(this, ticketService, configManager, langManager, sessionManager, creationCoordinator, creationMenu)
+        new PlayerCommands(this, ticketService, configManager, langManager, sessionManager, creationCoordinator, creationMenu, channelOrchestrator)
                 .register(commandManager);
         new AdminCommands(this, adminPanel, reloadService, gdprService, langManager).register(commandManager);
 
