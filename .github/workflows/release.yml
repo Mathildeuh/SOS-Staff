@@ -1,8 +1,10 @@
 name: Release
 
+# Manual-only for now: trigger from the Actions tab (Run workflow) once MODRINTH_TOKEN,
+# MODRINTH_PROJECT_ID, HANGAR_API_TOKEN, HANGAR_PROJECT_SLUG and DISCORD_RELEASE_WEBHOOK are
+# configured (see the README's CI/CD section) - switch back to `push: branches: [main]` for
+# fully automatic releases once that's done and a first real release is actually wanted.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

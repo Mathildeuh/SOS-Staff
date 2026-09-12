@@ -105,12 +105,14 @@ Three GitHub Actions workflows live under `.github/workflows/`:
 
 - **`ci.yml`** - build, test, and commit-message lint on every push and pull request.
 - **`dev-build.yml`** - uploads a numbered build artifact on every push to `develop`.
-- **`release.yml`** - on every push to `main`, classifies the commits since the last tag
-  (`feat` -> minor, a breaking change -> major, anything else -> patch), bumps and tags the
-  version with Axion Release, generates the changelog with git-cliff, publishes a GitHub Release
-  with the jar and its SHA-256 checksum, publishes to Modrinth and Hangar, and posts a Discord
-  notification. SpigotMC has no publishing API, so that listing still needs a manual update -
-  the workflow leaves a reminder in its own job summary.
+- **`release.yml`** - manual-only for now (run it from the Actions tab). It classifies the
+  commits since the last tag (`feat` -> minor, a breaking change -> major, anything else ->
+  patch), bumps and tags the version with Axion Release, generates the changelog with git-cliff,
+  publishes a GitHub Release with the jar and its SHA-256 checksum, publishes to Modrinth and
+  Hangar, and posts a Discord notification. SpigotMC has no publishing API, so that listing
+  still needs a manual update - the workflow leaves a reminder in its own job summary. Switch its
+  trigger back to `push: branches: [main]` once the table below is filled in and a fully
+  automatic release pipeline is actually wanted.
 
 `release.yml` needs the following repository secrets and variables configured before it can
 actually publish anything (it will simply fail those specific steps until they are set):
