@@ -25,6 +25,9 @@ import fr.mathildeuh.sosstaff.gui.AnvilInputGui;
 import fr.mathildeuh.sosstaff.gui.CreationMenu;
 import fr.mathildeuh.sosstaff.gui.GuiClickListener;
 import fr.mathildeuh.sosstaff.gui.PendingChatPrompts;
+import fr.mathildeuh.sosstaff.integration.LuckPermsHook;
+import fr.mathildeuh.sosstaff.integration.PlaceholderApiHook;
+import fr.mathildeuh.sosstaff.integration.VaultHook;
 import fr.mathildeuh.sosstaff.lang.LangManager;
 import fr.mathildeuh.sosstaff.session.LiveChatListener;
 import fr.mathildeuh.sosstaff.session.LiveChatSessionManager;
@@ -154,7 +157,21 @@ public final class SosStaffPlugin extends JavaPlugin {
 
         getServer().getOnlinePlayers().forEach(liveChatListener::reopenSessionIfNeeded);
 
+        registerSoftDependIntegrations();
+
         getLogger().info("SOS-Staff has been enabled.");
+    }
+
+    private void registerSoftDependIntegrations() {
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            new PlaceholderApiHook(this, ticketService).register();
+        }
+        if (getServer().getPluginManager().getPlugin("LuckPerms") != null) {
+            new LuckPermsHook(getLogger());
+        }
+        if (getServer().getPluginManager().getPlugin("Vault") != null) {
+            new VaultHook(getServer().getServicesManager(), getLogger());
+        }
     }
 
     @Override

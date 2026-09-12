@@ -8,6 +8,8 @@ plugins {
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://repo.extendedclip.com/releases/")
+    maven("https://jitpack.io")
 }
 
 dependencies {
@@ -21,6 +23,18 @@ dependencies {
     }
     implementation("com.github.ben-manes.caffeine:caffeine:3.2.4")
 
+    // Soft-depend integrations: compile-time only, never shaded. Each hook checks the target
+    // plugin's actual presence at runtime before touching any of these classes (see the
+    // integration/ package), so the plugin runs fine with none of them installed.
+    compileOnly("me.clip:placeholderapi:2.11.6")
+    compileOnly("net.luckperms:api:5.5")
+    compileOnly("com.github.MilkBowl:VaultAPI:1.7") {
+        // VaultAPI's own POM pulls in a decade-old org.bukkit:bukkit snapshot as a compile
+        // dependency; Paper API already provides everything Vault's classes reference from
+        // Bukkit, and the two conflict on the same "org.bukkit:bukkit" capability otherwise.
+        exclude(group = "org.bukkit", module = "bukkit")
+    }
+
     testImplementation("io.papermc.paper:paper-api:26.2.build.+")
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
@@ -31,6 +45,10 @@ dependencies {
 
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(25)
+}
+
+tasks.withType<JavaCompile> {
+    options.compilerArgs.add("-Xlint:deprecation")
 }
 
 tasks {
