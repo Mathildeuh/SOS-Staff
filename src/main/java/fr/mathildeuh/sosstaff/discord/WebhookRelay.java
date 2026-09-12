@@ -84,6 +84,13 @@ public final class WebhookRelay {
             return retryFuture;
         }).whenComplete((ignored, error) -> {
             if (error != null) {
+                // Failing again right after creating a brand new webhook means the problem isn't
+                // a stale cache entry - something else is wrong (missing Manage Webhooks
+                // permission on this channel, a second bot process fighting over the same
+                // channel, ...). Logged distinctly so it's not mistaken for the same "stale
+                // cache" case the retry above already handles.
+                logger.warning("Relay to Discord channel " + discordChannelId
+                        + " failed even after creating a brand new webhook: " + error);
                 future.completeExceptionally(error);
             } else {
                 future.complete(null);
