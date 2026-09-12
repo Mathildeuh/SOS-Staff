@@ -14,25 +14,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Paper 26.2 requires Java 25 just to boot, so there is no lower Java version left to
       # test against - see the toolchain in build.gradle.kts and the version decision it follows.
       - name: Set up JDK 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '25'
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          # Stays on the plain MIT-licensed actions/cache wrapper rather than the default
+          # proprietary Enhanced Caching provider - consistent with this project's own
+          # 100%-free-and-open-source stance, even though Enhanced Caching is free for a public
+          # repository like this one.
+          cache-provider: basic
 
       - name: Build, unit/MockBukkit test, and lang-parity check
         run: ./gradlew build --console=plain
 
       - name: Upload test report on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-report
           path: build/reports/tests/test
@@ -44,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
